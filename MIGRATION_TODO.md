@@ -1,8 +1,56 @@
 # Next.js Migration TODO
 
-## Migration Status: 100% Complete ✅ 🎉
+## Migration Status: Core Pages Complete ✅
 
-The Next.js migration has been **successfully completed**! All critical features are working, including authentication, theme support, and full UI styling from the original project.
+The Next.js migration core pages are **successfully completed**! Homepage, authentication pages (login/register), forgot password, and 404 are fully migrated with complete UI styling from the original project.
+
+---
+
+## 📄 Pages Migration Status
+
+### ✅ Completed Pages (6/16)
+1. **Home Page** (page.tsx) - Complete marketing landing page with pricing
+2. **Login Page** (app/login/page.tsx) - Split-screen with tabs for funeral home/family
+3. **Register Page** (app/register/page.tsx) - Complete registration with tabs and validation
+4. **Not Found Page** (app/not-found.tsx) - 404 error page
+5. **Forgot Password** (app/forgot-password/page.tsx) - 3-step password recovery flow
+6. **Dashboard** (app/dashboard/page.tsx) - Basic dashboard (needs enhancement)
+
+### 🔄 Pages Needing Migration (10/16)
+Priority order based on user flow importance:
+
+**High Priority:**
+1. **PublicMemorialPage.tsx** (556 lines) → app/memorial/[slug]/page.tsx
+   - Public memorial view with gallery, dedications, biography
+   - Critical user-facing page accessed via QR codes
+2. **FuneralHomeDashboard.tsx** (432 lines) → Enhance app/dashboard/page.tsx
+   - Dashboard for funeral homes with memorial management
+   - Stats, create memorial dialog, grid/list view
+3. **FamilyDashboard.tsx** (313 lines) → Enhance app/dashboard/page.tsx
+   - Dashboard for family users
+   - View memorials, recent dedications
+4. **CheckoutPage.tsx** (714 lines) → app/checkout/page.tsx
+   - Payment flow with Stripe integration
+   - Plan selection and subscription
+
+**Medium Priority:**
+5. **MemorialEditPage.tsx** (427 lines) → app/memorial/[slug]/edit/page.tsx
+   - Edit memorial content, photos, descendants
+6. **ProfilePage.tsx** (681 lines) → app/profile/page.tsx
+   - User profile management
+7. **MemorialsPage.tsx** (248 lines) → app/memorials/page.tsx
+   - List/browse all memorials
+8. **AcceptInvitationPage.tsx** (102 lines) → app/accept-invitation/page.tsx
+   - Family user invitation acceptance flow
+
+**Low Priority (Admin):**
+9. **AdminLoginPage.tsx** (156 lines) → app/admin/login/page.tsx
+   - Separate admin authentication
+10. **AdminDashboard.tsx** (1235 lines) → app/admin/dashboard/page.tsx
+    - Complex admin panel with orders, stats, management
+
+**Not Needed:**
+- ComponentShowcase.tsx (1437 lines) - Development only, not for production
 
 ---
 
