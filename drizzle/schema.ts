@@ -78,6 +78,7 @@ export const memorials = pgTable("memorials", {
   id: serial("id").primaryKey(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   fullName: varchar("full_name", { length: 255 }).notNull(),
+  popularName: varchar("popular_name", { length: 255 }),
   birthDate: varchar("birth_date", { length: 10 }),
   deathDate: varchar("death_date", { length: 10 }),
   birthplace: varchar("birthplace", { length: 255 }),
