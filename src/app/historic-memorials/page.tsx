@@ -39,16 +39,16 @@ export default function HistoricMemorialsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white relative">
       {/* Background Decorations */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 float"></div>
         <div className="absolute top-40 right-10 w-72 h-72 bg-rose-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 float" style={{ animationDelay: '2s' }}></div>
         <div className="absolute bottom-20 left-1/3 w-72 h-72 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 float" style={{ animationDelay: '4s' }}></div>
       </div>
 
       {/* Header */}
-      <header className="relative px-4 sm:px-6 py-8 sm:py-12 border-b border-gray-200/50 bg-white/50 backdrop-blur-sm">
+      <header className="relative z-10 px-4 sm:px-6 py-8 sm:py-12 border-b border-gray-200/50 bg-white/50 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-4 mb-6">
             <Button
@@ -90,7 +90,7 @@ export default function HistoricMemorialsPage() {
       </header>
 
       {/* Content */}
-      <main className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+      <main className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         {filteredMemorials && filteredMemorials.length > 0 ? (
           <>
             <div className="mb-8 flex items-center gap-2 text-sm text-gray-600">
@@ -99,11 +99,11 @@ export default function HistoricMemorialsPage() {
                 {filteredMemorials.length} memorial{filteredMemorials.length !== 1 ? 'is' : ''} encontrado{filteredMemorials.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
               {filteredMemorials.map((memorial) => (
                 <Card
                   key={memorial.id}
-                  className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-gray-200/50 overflow-hidden"
+                  className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-gray-200/50 overflow-hidden flex flex-col h-full"
                   onClick={() => router.push(`/memorial/${memorial.slug}`)}
                 >
                   {/* Image Section */}
@@ -129,7 +129,7 @@ export default function HistoricMemorialsPage() {
                   </div>
 
                   {/* Content Section */}
-                  <CardContent className="p-5 sm:p-6">
+                  <CardContent className="p-5 sm:p-6 flex flex-col flex-grow">
                     {/* Title with Popular Name */}
                     <div className="mb-3">
                       <h3 className="font-bold text-lg sm:text-xl text-gray-900 line-clamp-2 group-hover:text-teal-700 transition-colors">
@@ -157,14 +157,14 @@ export default function HistoricMemorialsPage() {
 
                     {/* Biography */}
                     {memorial.biography && (
-                      <p className="text-sm text-gray-600 line-clamp-3 mb-4 leading-relaxed">
+                      <p className="text-sm text-gray-600 line-clamp-3 mb-4 leading-relaxed flex-grow">
                         {memorial.biography}
                       </p>
                     )}
 
                     {/* CTA Button */}
                     <Button
-                      className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium shadow-md hover:shadow-lg transition-all"
+                      className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium shadow-md hover:shadow-lg transition-all mt-auto"
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/memorial/${memorial.slug}`);
