@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Card } from "~/components/ui/card";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
+import { logout } from "~/app/actions/auth";
 import {
   QrCode, Plus, Eye, Edit3, LogOut, Search,
   LayoutGrid, List, Calendar, MapPin, Users,
@@ -62,10 +63,14 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    // TODO: Implement logout
-    toast.success("Logout realizado com sucesso!");
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logout realizado com sucesso!");
+      router.push("/login");
+    } catch (error) {
+      toast.error("Erro ao fazer logout");
+    }
   };
 
   const filteredMemorials = memorials?.filter(m =>
@@ -143,22 +148,34 @@ export default function DashboardPage() {
             </div>
 
             <nav className="space-y-1">
-              <a href="#" className="flex items-center gap-3 px-4 py-3 bg-teal-50 text-teal-700 rounded-xl font-medium">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-teal-50 text-teal-700 rounded-xl font-medium"
+              >
                 <LayoutGrid className="w-5 h-5" />
                 Dashboard
-              </a>
-              <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
+              </button>
+              <button
+                onClick={() => router.push("/dashboard/memorials")}
+                className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors text-left"
+              >
                 <FileText className="w-5 h-5" />
                 Memoriais
-              </a>
-              <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
+              </button>
+              <button
+                onClick={() => router.push("/dashboard/families")}
+                className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors text-left"
+              >
                 <Users className="w-5 h-5" />
                 Famílias
-              </a>
-              <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
+              </button>
+              <button
+                onClick={() => router.push("/dashboard/reports")}
+                className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors text-left"
+              >
                 <TrendingUp className="w-5 h-5" />
                 Relatórios
-              </a>
+              </button>
             </nav>
           </div>
 
