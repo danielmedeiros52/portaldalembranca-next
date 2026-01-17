@@ -233,6 +233,12 @@ const memorialRouter = router({
       return db.getPublicMemorials();
     }),
 
+  // Get all historical memorials (public and active)
+  getHistoricMemorials: publicProcedure
+    .query(async () => {
+      return db.getHistoricMemorials();
+    }),
+
   // List memorials for current user (auto-detects user type)
   list: protectedProcedure
     .query(async ({ ctx }) => {

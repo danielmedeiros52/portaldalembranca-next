@@ -178,6 +178,19 @@ export async function getPublicMemorials(): Promise<Memorial[]> {
     .orderBy(desc(memorials.createdAt));
 }
 
+// Get all historical memorials (public and active)
+export async function getHistoricMemorials(): Promise<Memorial[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(memorials)
+    .where(and(
+      eq(memorials.status, 'active'),
+      eq(memorials.visibility, 'public'),
+      eq(memorials.isHistorical, true)
+    ))
+    .orderBy(desc(memorials.createdAt));
+}
+
 // Descendant queries
 export async function getDescendantsByMemorialId(memorialId: number): Promise<Descendant[]> {
   const db = await getDb();
