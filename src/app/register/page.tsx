@@ -9,7 +9,7 @@ import {
   QrCode, Building2, Users, ArrowLeft, Eye, EyeOff,
   Mail, Lock, User, Phone, MapPin, FileText, Loader2, CheckCircle2
 } from "lucide-react";
-import { api } from "~/trpc/react";
+import { registerFuneralHome, registerFamilyUser } from "~/app/actions/auth";
 
 const APP_TITLE = "Portal da Lembrança";
 
@@ -36,10 +36,6 @@ function RegisterPageContent() {
     cnpj: "",
     address: ""
   });
-
-  // tRPC mutations for real registration
-  const funeralHomeRegisterMutation = api.auth.funeralHomeRegister.useMutation();
-  const familyUserRegisterMutation = api.auth.familyUserRegister.useMutation();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -116,9 +112,10 @@ function RegisterPageContent() {
     setIsLoading(true);
 
     try {
+      let result;
+
       if (userType === "funeral_home") {
-        // Register funeral home via tRPC
-        await funeralHomeRegisterMutation.mutateAsync({
+        result = await registerFuneralHome({
           name: formData.companyName || formData.name,
           email: formData.email,
           password: formData.password,
@@ -126,27 +123,33 @@ function RegisterPageContent() {
           address: formData.address,
         });
 
+        if (!result.success) {
+          toast.error(result.error || "Erro ao criar conta");
+          return;
+        }
+
         toast.success("Cadastro realizado com sucesso!");
         router.push("/login");
       } else {
-        // Register family user via tRPC
-        await familyUserRegisterMutation.mutateAsync({
+        result = await registerFamilyUser({
           name: formData.name,
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
         });
 
-        toast.success("Cadastro realizado com sucesso!");
+        if (!result.success) {
+          toast.error(result.error || "Erro ao criar conta");
+          return;
+        }
 
-        // Refresh to ensure cookies are synced before redirect
-        router.refresh();
+        toast.success("Cadastro realizado com sucesso!");
 
         // Redirect to checkout if plan was selected, otherwise to dashboard
         if (selectedPlan) {
-          window.location.href = `/checkout?plan=${selectedPlan}`;
+          router.push(`/checkout?plan=${selectedPlan}`);
         } else {
-          window.location.href = "/dashboard";
+          router.push("/dashboard");
         }
       }
     } catch (error: any) {

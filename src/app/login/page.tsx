@@ -6,7 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { toast } from "sonner";
 import { QrCode, Building2, Users, ArrowLeft, Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
-import { api } from "~/trpc/react";
+import { loginFuneralHome, loginFamilyUser } from "~/app/actions/auth";
 
 const APP_TITLE = "Portal da Lembrança";
 
@@ -29,10 +29,6 @@ function LoginPageContent() {
     }
   }, [selectedPlan]);
 
-  // tRPC mutations for real authentication
-  const funeralHomeLoginMutation = api.auth.funeralHomeLogin.useMutation();
-  const familyUserLoginMutation = api.auth.familyUserLogin.useMutation();
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -50,31 +46,26 @@ function LoginPageContent() {
     setIsLoading(true);
 
     try {
-      // Real authentication via tRPC
+      let result;
+
       if (userType === "funeral_home") {
-        await funeralHomeLoginMutation.mutateAsync({ email, password });
-
-        toast.success("Login realizado com sucesso!");
-
-        // Refresh to ensure cookies are synced before redirect
-        router.refresh();
-
-        // Use window.location for hard navigation to ensure cookie is recognized
-        window.location.href = "/dashboard";
+        result = await loginFuneralHome(email, password);
       } else {
-        await familyUserLoginMutation.mutateAsync({ email, password });
+        result = await loginFamilyUser(email, password);
+      }
 
-        toast.success("Login realizado com sucesso!");
+      if (!result.success) {
+        toast.error(result.error || "E-mail ou senha inválidos");
+        return;
+      }
 
-        // Refresh to ensure cookies are synced before redirect
-        router.refresh();
+      toast.success("Login realizado com sucesso!");
 
-        // Redirect to checkout with selected plan if one was chosen
-        if (selectedPlan) {
-          window.location.href = `/checkout?plan=${selectedPlan}`;
-        } else {
-          window.location.href = "/dashboard";
-        }
+      // Redirect after successful login
+      if (userType === "family" && selectedPlan) {
+        router.push(`/checkout?plan=${selectedPlan}`);
+      } else {
+        router.push("/dashboard");
       }
     } catch (error: any) {
       console.error("Login error:", error);
