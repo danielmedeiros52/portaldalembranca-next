@@ -55,17 +55,25 @@ function LoginPageContent() {
         await funeralHomeLoginMutation.mutateAsync({ email, password });
 
         toast.success("Login realizado com sucesso!");
-        router.push("/dashboard");
+
+        // Refresh to ensure cookies are synced before redirect
+        router.refresh();
+
+        // Use window.location for hard navigation to ensure cookie is recognized
+        window.location.href = "/dashboard";
       } else {
         await familyUserLoginMutation.mutateAsync({ email, password });
 
         toast.success("Login realizado com sucesso!");
 
+        // Refresh to ensure cookies are synced before redirect
+        router.refresh();
+
         // Redirect to checkout with selected plan if one was chosen
         if (selectedPlan) {
-          router.push(`/checkout?plan=${selectedPlan}`);
+          window.location.href = `/checkout?plan=${selectedPlan}`;
         } else {
-          router.push("/dashboard");
+          window.location.href = "/dashboard";
         }
       }
     } catch (error: any) {

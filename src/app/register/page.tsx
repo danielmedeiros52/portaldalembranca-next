@@ -139,11 +139,14 @@ function RegisterPageContent() {
 
         toast.success("Cadastro realizado com sucesso!");
 
+        // Refresh to ensure cookies are synced before redirect
+        router.refresh();
+
         // Redirect to checkout if plan was selected, otherwise to dashboard
         if (selectedPlan) {
-          router.push(`/checkout?plan=${selectedPlan}`);
+          window.location.href = `/checkout?plan=${selectedPlan}`;
         } else {
-          router.push("/dashboard");
+          window.location.href = "/dashboard";
         }
       }
     } catch (error: any) {
