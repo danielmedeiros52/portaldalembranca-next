@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { COOKIE_NAME } from "~/shared/const";
 
 export function middleware(request: NextRequest) {
-  const sessionCookie = request.cookies.get("session")?.value;
+  const sessionCookie = request.cookies.get(COOKIE_NAME)?.value;
   const { pathname } = request.nextUrl;
 
   // Protected routes that require authentication
