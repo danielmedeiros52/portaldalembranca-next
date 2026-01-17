@@ -39,5 +39,18 @@
     "**/*.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "generated", "**/*.old", "**/api.old/**", "**/_core/*.old"]
+  "exclude": [
+    "node_modules",
+    "generated",
+    "**/*.old",
+    "**/api.old/**",
+    "**/_core/*.old",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "vitest.setup.ts",
+    "vitest.config.ts",
+    "stryker.config.json"
+  ]
 }
