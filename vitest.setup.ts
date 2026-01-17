@@ -37,4 +37,8 @@ vi.mock("next/headers", () => ({
 // Mock environment variables
 process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
 process.env.JWT_SECRET = "test-secret-at-least-32-characters-long";
-process.env.NODE_ENV = "test";
+Object.defineProperty(process.env, "NODE_ENV", {
+  value: "test",
+  writable: true,
+  configurable: true,
+});

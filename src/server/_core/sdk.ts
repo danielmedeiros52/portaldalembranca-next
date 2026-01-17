@@ -2,6 +2,7 @@ import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const";
 import { ForbiddenError } from "../../shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
+import { SignJWT, jwtVerify } from "jose";
 // Generic request type for Next.js compatibility
 type Request = { headers: Record<string, string | string[] | undefined>; cookies?: Record<string, string> };
 import type { User } from "../../../drizzle/schema";
@@ -182,12 +183,6 @@ class SDKServer {
     payload: SessionPayload,
     options: { expiresInMs?: number } = {}
   ): Promise<string> {
-    // Dynamic import for ES-only jose module
-    // Use computed string to prevent TypeScript from creating static dependency
-    const joseModule = "jose";
-    const jose: any = await import(joseModule);
-    const SignJWT = jose.SignJWT;
-
     const issuedAt = Date.now();
     const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
@@ -212,12 +207,6 @@ class SDKServer {
     }
 
     try {
-      // Dynamic import for ES-only jose module
-      // Use computed string to prevent TypeScript from creating static dependency
-      const joseModule = "jose";
-      const jose: any = await import(joseModule);
-      const jwtVerify = jose.jwtVerify;
-
       const secretKey = this.getSessionSecret();
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],

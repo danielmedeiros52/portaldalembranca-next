@@ -16,6 +16,7 @@ import { cookies } from "next/headers";
 
 const FUNERAL_HOME_PREFIX = "funeral" as const;
 const FAMILY_USER_PREFIX = "family" as const;
+const ADMIN_USER_PREFIX = "admin" as const;
 
 async function persistUserSession(
   ctx: any,
@@ -541,7 +542,7 @@ const adminRouter = router({
       email: z.string().email(),
       password: z.string().min(6),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const admin = await db.getAdminUserByEmail(input.email);
       if (!admin) {
         throw new Error("E-mail ou senha inválidos");
@@ -553,7 +554,16 @@ const adminRouter = router({
       if (!isPasswordValid) {
         throw new Error("E-mail ou senha inválidos");
       }
+
       await db.updateAdminLastLogin(admin.id);
+
+      await persistUserSession(ctx, {
+        openId: buildAccountOpenId(ADMIN_USER_PREFIX, admin.id),
+        name: admin.name,
+        email: admin.email,
+        loginMethod: "admin",
+      });
+
       return { id: admin.id, name: admin.name, email: admin.email, type: "admin" };
     }),
 
