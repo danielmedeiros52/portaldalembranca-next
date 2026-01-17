@@ -1,29 +1,50 @@
-# Create T3 App
+# Portal da Lembrança - Next.js
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+Migrated to Next.js 15 with App Router, tRPC, and Drizzle ORM.
 
-## What's next? How do I make an app with this?
+## Quick Start
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+```bash
+# Install dependencies
+pnpm install
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your DATABASE_URL and JWT_SECRET
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+# Push database schema
+pnpm db:push
 
-## Learn More
+# Start development server
+pnpm dev
+```
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+## Deployment
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+This project is optimized for Vercel:
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+1. Push to GitHub
+2. Import in Vercel
+3. Add environment variables
+4. Deploy!
 
-## How do I deploy this?
+No `vercel.json` needed - just works! ✨
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **API**: tRPC 11
+- **Database**: PostgreSQL + Drizzle ORM  
+- **Styling**: Tailwind CSS 4 + shadcn/ui
+- **Auth**: Custom JWT-based authentication
+- **Deployment**: Vercel (zero-config)
+
+## Migration from Vite
+
+This project was migrated from Vite + React to Next.js:
+- ✅ Zero module resolution issues
+- ✅ Server-side rendering
+- ✅ Automatic code splitting
+- ✅ Better SEO
+- ✅ Simpler deployment
+
