@@ -75,7 +75,7 @@ export default function HomePage() {
             <Button
               variant="ghost"
               className="hidden sm:inline-flex text-gray-600 hover:text-teal-700"
-              onClick={() => router.push("/memorial/maria-silva-santos")}
+              onClick={() => router.push("/memorials")}
             >
               Ver Demo
             </Button>
@@ -120,7 +120,7 @@ export default function HomePage() {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
                 <Button
-                  onClick={() => router.push("/memorial/maria-silva-santos")}
+                  onClick={() => router.push("/memorials")}
                   variant="outline"
                   className="btn-outline"
                 >
