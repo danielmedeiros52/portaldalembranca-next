@@ -5,6 +5,26 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ui-avatars.com",
+        pathname: "/api/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.amazonaws.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.cloudinary.com",
+        pathname: "/**",
+      },
+    ],
+  },
+};
 
 export default config;

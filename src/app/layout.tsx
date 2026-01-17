@@ -8,8 +8,45 @@ import { ThemeProvider } from "~/components/theme-provider";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
-  title: "Portal da Lembrança",
-  description: "Eternize memórias com QR codes em homenagens especiais",
+  title: {
+    default: "Portal da Lembrança - Memoriais Digitais com QR Code",
+    template: "%s | Portal da Lembrança",
+  },
+  description: "Preserve memórias com tecnologia e sensibilidade. Crie memoriais digitais duradouros com QR codes personalizados. Solução desenvolvida em Pernambuco para famílias e funerárias.",
+  keywords: ["memorial digital", "qr code", "homenagem", "lembrança", "funerária", "cemitério", "Pernambuco", "Recife"],
+  authors: [{ name: "Portal da Lembrança" }],
+  creator: "Portal da Lembrança",
+  publisher: "Portal da Lembrança",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://portaldalembranca.com.br"),
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "/",
+    siteName: "Portal da Lembrança",
+    title: "Portal da Lembrança - Memoriais Digitais com QR Code",
+    description: "Preserve memórias com tecnologia e sensibilidade. Crie memoriais digitais duradouros.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Portal da Lembrança",
+    description: "Preserve memórias com tecnologia e sensibilidade",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
