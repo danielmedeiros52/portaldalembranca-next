@@ -10,11 +10,22 @@ All required environment variables are properly configured for local development
 
 ### ✅ DATABASE_URL
 ```bash
+# Local Development
 DATABASE_URL="postgresql://postgres:password@localhost:5432/portal_lembranca"
+
+# Production (Neon with pooling - RECOMMENDED)
+DATABASE_URL="postgresql://user:pass@host-pooler.region.aws.neon.tech/dbname?sslmode=require"
+
+# Migrations (Neon without pooling)
+DATABASE_URL="postgresql://user:pass@host.region.aws.neon.tech/dbname?sslmode=require"
 ```
-- **Status**: ✅ Configured
+- **Status**: ✅ Configured for development
 - **Purpose**: PostgreSQL connection string for Drizzle ORM
-- **For Production**: Update with Neon or Vercel Postgres URL with `?sslmode=require`
+- **For Production**: Use Neon pooled connection (see VERCEL_DEPLOYMENT.md)
+- **Important**:
+  - Use **pooled** (`-pooler` in hostname) for app in production
+  - Use **direct** (no `-pooler`) for running migrations
+  - Always include `?sslmode=require` for production
 
 ### ✅ JWT_SECRET
 ```bash
@@ -106,26 +117,41 @@ server: {
 
 ## For Production Deployment (Vercel)
 
-When deploying to Vercel, add these environment variables in the dashboard:
+When deploying to Vercel, add these environment variables in the dashboard.
+
+**📘 For detailed Vercel + Neon deployment guide, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md)**
 
 ### Required
-1. **DATABASE_URL** - Vercel Postgres or Neon connection string
+
+1. **DATABASE_URL** - Neon connection string with pooling
    ```
-   postgres://user:pass@host/db?sslmode=require
+   # Use the POOLED connection from Neon dashboard
+   postgresql://user:pass@host-pooler.region.aws.neon.tech/db?sslmode=require
    ```
+   ⚠️ **Important**: Use the connection string with `-pooler` in the hostname for Vercel production!
 
 2. **JWT_SECRET** - Generate new production secret
    ```bash
    openssl rand -hex 32
    ```
+   🔐 **Never reuse** development secrets in production!
 
 3. **NODE_ENV** - Automatically set to "production" by Vercel
+   ```
+   production
+   ```
+
+4. **NEXT_PUBLIC_APP_URL** - Your production domain
+   ```
+   https://portaldalembranca.vercel.app
+   ```
+   Used for QR code generation and absolute URLs.
 
 ### Optional (Add as needed)
-- STRIPE_SECRET_KEY / NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-- OAUTH_SERVER_URL / OWNER_OPEN_ID
-- NEXT_PUBLIC_FRONTEND_FORGE_API_KEY / NEXT_PUBLIC_FRONTEND_FORGE_API_URL
-- Analytics variables
+- **AWS_ACCESS_KEY_ID**, **AWS_SECRET_ACCESS_KEY**, **AWS_S3_BUCKET**, **AWS_REGION** - For file uploads
+- **STRIPE_SECRET_KEY** / **NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY** - For payments
+- **OAUTH_SERVER_URL** / **OWNER_OPEN_ID** - For external OAuth
+- Analytics variables (if using Umami or similar)
 
 ---
 

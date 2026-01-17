@@ -6,6 +6,9 @@ import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
+  // Standalone output for Docker deployment
+  output: "standalone",
+
   images: {
     remotePatterns: [
       {

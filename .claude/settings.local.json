@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add:*)",
+      "Bash(pnpm test:run:*)",
+      "Bash(docker:*)",
+      "Bash(make:*)",
+      "Bash(node --version:*)",
+      "Bash(pnpm:*)"
+    ]
+  }
+}
