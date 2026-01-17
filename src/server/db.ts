@@ -12,9 +12,14 @@ let _client: ReturnType<typeof postgres> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _client = postgres(process.env.DATABASE_URL, { 
+      // Enable SSL if connection string requires it OR if in production
+      const requiresSSL = process.env.DATABASE_URL.includes('sslmode=require') ||
+                         process.env.DATABASE_URL.includes('neon.tech') ||
+                         process.env.NODE_ENV === 'production';
+
+      _client = postgres(process.env.DATABASE_URL, {
         max: 1,
-        ssl: process.env.NODE_ENV === 'production' ? 'require' : false
+        ssl: requiresSSL ? 'require' : false
       });
       _db = drizzle(_client);
     } catch (error) {
