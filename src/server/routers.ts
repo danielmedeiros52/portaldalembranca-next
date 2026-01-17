@@ -12,11 +12,11 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { generateMemorialQRCode, generateMemorialQRCodeSVG } from "~/server/qrcode";
 import { sdk } from "~/server/_core/sdk";
+import { cookies } from "next/headers";
 
 const FUNERAL_HOME_PREFIX = "funeral" as const;
 const FAMILY_USER_PREFIX = "family" as const;
 
-// TODO: Reimplement with Next.js cookies() instead of Express res.cookie()
 async function persistUserSession(
   ctx: any,
   payload: { openId: string; name: string; email?: string | null; loginMethod: string }
@@ -34,10 +34,14 @@ async function persistUserSession(
     expiresInMs: ONE_YEAR_MS,
   });
 
-  // TODO: Set cookie using Next.js cookies() API
-  console.warn("[Auth] Cookie setting not implemented for Next.js yet");
-  // const cookieOptions = getSessionCookieOptions();
-  // Use Next.js cookies().set() here
+  // Set session cookie using Next.js cookies() API
+  const cookieStore = await cookies();
+  const cookieOptions = getSessionCookieOptions();
+
+  cookieStore.set(COOKIE_NAME, token, {
+    ...cookieOptions,
+    maxAge: ONE_YEAR_MS / 1000, // Convert milliseconds to seconds for maxAge
+  });
 }
 
 function buildAccountOpenId(prefix: string, id: number) {
@@ -55,9 +59,9 @@ function generateSlug(name: string): string {
 const authRouter = router({
   me: publicProcedure.query(opts => opts.ctx.user),
   logout: publicProcedure.mutation(async ({ ctx }) => {
-    // TODO: Clear cookie using Next.js cookies() API
-    console.warn("[Auth] Logout not fully implemented for Next.js yet");
-    // Use cookies().delete(COOKIE_NAME) here
+    // Clear session cookie using Next.js cookies() API
+    const cookieStore = await cookies();
+    cookieStore.delete(COOKIE_NAME);
     return { success: true } as const;
   }),
 

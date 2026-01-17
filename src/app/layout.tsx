@@ -3,6 +3,7 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "~/components/ui/sonner";
+import { ThemeProvider } from "~/components/theme-provider";
 
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -21,12 +22,19 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${geist.variable}`}>
+    <html lang="pt-BR" className={`${geist.variable}`} suppressHydrationWarning>
       <body>
-        <TRPCReactProvider>
-          {children}
-          <Toaster />
-        </TRPCReactProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TRPCReactProvider>
+            {children}
+            <Toaster />
+          </TRPCReactProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
