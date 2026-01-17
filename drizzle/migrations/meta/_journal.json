@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1767201882596,
+      "tag": "0000_confused_anita_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1735649763000,
+      "tag": "20251231131603_create_leads_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1735833671000,
+      "tag": "20260102160111_add_memorial_fields",
+      "breakpoints": true
+    }
+  ]
+}

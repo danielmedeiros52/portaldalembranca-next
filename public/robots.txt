@@ -1,0 +1,47 @@
+# Portal da Lembrança - Robots.txt
+# https://portaldalembranca.com.br
+
+User-agent: *
+Allow: /
+Allow: /m/
+Allow: /memoriais
+Allow: /sobre
+Allow: /contato
+
+# Bloquear áreas administrativas e privadas
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /checkout
+Disallow: /login
+Disallow: /register
+
+# Bloquear recursos estáticos desnecessários
+Disallow: /*.json$
+Disallow: /*.js$
+Disallow: /*.css$
+
+# Sitemap
+Sitemap: https://portaldalembranca.com.br/sitemap.xml
+
+# Crawl-delay para não sobrecarregar o servidor
+Crawl-delay: 1
+
+# Regras específicas para Googlebot
+User-agent: Googlebot
+Allow: /
+Allow: /m/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+
+# Regras para Googlebot-Image
+User-agent: Googlebot-Image
+Allow: /
+Allow: /m/
+
+# Regras para Bingbot
+User-agent: Bingbot
+Allow: /
+Allow: /m/
+Crawl-delay: 2
