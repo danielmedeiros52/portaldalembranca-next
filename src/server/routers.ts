@@ -4,20 +4,21 @@ import { systemRouter } from "~/server/_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "~/server/_core/trpc";
 import { z } from "zod";
 import { getDb } from "~/server/db";
-import { funeralHomes, familyUsers, memorials, descendants, photos, dedications, leads, orders, orderHistory, adminUsers, InsertMemorial, InsertDescendant, InsertPhoto, InsertDedication, InsertLead, InsertOrder, InsertOrderHistory, InsertAdminUser } from "../../drizzle/schema";
+import { funeralHomes, familyUsers, memorials, descendants, photos, dedications, leads, orders, orderHistory, adminUsers } from "../../drizzle/schema";
+import type { InsertMemorial, InsertDescendant, InsertPhoto, InsertDedication, InsertLead, InsertOrder, InsertOrderHistory, InsertAdminUser } from "../../drizzle/schema";
 import * as db from "~/server/db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { generateMemorialQRCode, generateMemorialQRCodeSVG } from "~/server/qrcode";
 import { sdk } from "~/server/_core/sdk";
-import type { Request, Response } from "express";
 
 const FUNERAL_HOME_PREFIX = "funeral" as const;
 const FAMILY_USER_PREFIX = "family" as const;
 
+// TODO: Reimplement with Next.js cookies() instead of Express res.cookie()
 async function persistUserSession(
-  ctx: { req: Request; res: Response },
+  ctx: any,
   payload: { openId: string; name: string; email?: string | null; loginMethod: string }
 ) {
   await db.upsertUser({
@@ -32,8 +33,11 @@ async function persistUserSession(
     name: payload.name,
     expiresInMs: ONE_YEAR_MS,
   });
-  const cookieOptions = getSessionCookieOptions(ctx.req);
-  ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+  // TODO: Set cookie using Next.js cookies() API
+  console.warn("[Auth] Cookie setting not implemented for Next.js yet");
+  // const cookieOptions = getSessionCookieOptions();
+  // Use Next.js cookies().set() here
 }
 
 function buildAccountOpenId(prefix: string, id: number) {
@@ -50,9 +54,10 @@ function generateSlug(name: string): string {
 // Auth Router
 const authRouter = router({
   me: publicProcedure.query(opts => opts.ctx.user),
-  logout: publicProcedure.mutation(({ ctx }) => {
-    const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+  logout: publicProcedure.mutation(async ({ ctx }) => {
+    // TODO: Clear cookie using Next.js cookies() API
+    console.warn("[Auth] Logout not fully implemented for Next.js yet");
+    // Use cookies().delete(COOKIE_NAME) here
     return { success: true } as const;
   }),
 
@@ -223,6 +228,29 @@ const memorialRouter = router({
       return db.getPublicMemorials();
     }),
 
+  // List memorials for current user (auto-detects user type)
+  list: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (!ctx.user) {
+        throw new Error("Não autenticado");
+      }
+
+      // Check if user is a funeral home (openId starts with "funeral-")
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        const funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        return db.getMemorialsByFuneralHomeId(funeralHomeId);
+      }
+
+      // Check if user is a family user (openId starts with "family-")
+      if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        const familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        return db.getMemorialsByFamilyUserId(familyUserId);
+      }
+
+      // If neither, return empty array
+      return [];
+    }),
+
   // Get memorials by funeral home
   getByFuneralHome: protectedProcedure
     .input(z.object({ funeralHomeId: z.number() }))
@@ -279,7 +307,7 @@ const memorialRouter = router({
         const invitationExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
         await dbInstance.insert(familyUsers).values({
-          name: input.familyEmail.split("@")[0],
+          name: input.familyEmail.split("@")[0] || input.familyEmail,
           email: input.familyEmail,
           invitationToken,
           invitationExpiry,

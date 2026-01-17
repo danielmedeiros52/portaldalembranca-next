@@ -23,7 +23,7 @@ export async function createContext(opts: {
       if (session) {
         // Get user from database using openId from session
         const { getUserByOpenId } = await import("~/server/db");
-        user = await getUserByOpenId(session.openId);
+        user = (await getUserByOpenId(session.openId)) ?? null;
       }
     }
   } catch (error) {

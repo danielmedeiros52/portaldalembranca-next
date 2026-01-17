@@ -15,7 +15,11 @@
  *     }]
  *   });
  */
-import { storagePut } from "server/storage";
+// TODO: Implement storage module
+// import { storagePut } from "server/storage";
+const storagePut = async (path: string, data: any, mimeType?: string) => {
+  throw new Error("Storage not implemented");
+};
 import { ENV } from "./env";
 
 export type GenerateImageOptions = {

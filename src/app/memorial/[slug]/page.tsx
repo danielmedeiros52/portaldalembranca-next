@@ -6,9 +6,10 @@ import { Calendar } from "lucide-react";
 export default async function MemorialPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const memorial = await api.memorial.getBySlug({ slug: params.slug });
+  const { slug } = await params;
+  const memorial = await api.memorial.getBySlug({ slug });
 
   if (!memorial) {
     notFound();
@@ -21,14 +22,16 @@ export default async function MemorialPage({
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-slate-900 mb-4">
-              {memorial.deceasedName}
+              {memorial.fullName}
             </h1>
-            <div className="flex items-center justify-center gap-2 text-slate-600">
-              <Calendar className="w-4 h-4" />
-              <span>
-                {new Date(memorial.birthDate).toLocaleDateString()} - {new Date(memorial.deathDate).toLocaleDateString()}
-              </span>
-            </div>
+            {memorial.birthDate && memorial.deathDate && (
+              <div className="flex items-center justify-center gap-2 text-slate-600">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  {new Date(memorial.birthDate).toLocaleDateString()} - {new Date(memorial.deathDate).toLocaleDateString()}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Biography */}
@@ -44,15 +47,15 @@ export default async function MemorialPage({
           </Card>
 
           {/* Photos will go here */}
-          {memorial.photoUrl && (
+          {memorial.mainPhoto && (
             <Card>
               <CardHeader>
                 <CardTitle>Foto</CardTitle>
               </CardHeader>
               <CardContent>
                 <img
-                  src={memorial.photoUrl}
-                  alt={memorial.deceasedName}
+                  src={memorial.mainPhoto}
+                  alt={memorial.fullName}
                   className="w-full rounded-lg"
                 />
               </CardContent>

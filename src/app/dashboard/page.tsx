@@ -37,14 +37,16 @@ export default function DashboardPage() {
             <Card key={memorial.id} className="hover:shadow-lg transition-shadow cursor-pointer"
                   onClick={() => router.push(`/memorial/${memorial.slug}`)}>
               <CardHeader>
-                <CardTitle>{memorial.deceasedName}</CardTitle>
+                <CardTitle>{memorial.fullName}</CardTitle>
                 <CardDescription>
-                  {new Date(memorial.birthDate).toLocaleDateString()} - {new Date(memorial.deathDate).toLocaleDateString()}
+                  {memorial.birthDate && memorial.deathDate && (
+                    `${new Date(memorial.birthDate).toLocaleDateString()} - ${new Date(memorial.deathDate).toLocaleDateString()}`
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-slate-600 line-clamp-2">
-                  {memorial.biography}
+                  {memorial.biography || "Sem biografia"}
                 </p>
               </CardContent>
             </Card>

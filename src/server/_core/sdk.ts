@@ -2,8 +2,9 @@ import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const";
 import { ForbiddenError } from "../../shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
-import type { Request } from "express";
-import type { User } from "../../drizzle/schema";
+// Generic request type for Next.js compatibility
+type Request = { headers: Record<string, string | string[] | undefined>; cookies?: Record<string, string> };
+import type { User } from "../../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
 import type {
@@ -269,7 +270,8 @@ class SDKServer {
 
   async authenticateRequest(req: Request): Promise<User> {
     // Regular authentication flow
-    const cookies = this.parseCookies(req.headers.cookie);
+    const cookieHeader = Array.isArray(req.headers.cookie) ? req.headers.cookie[0] : req.headers.cookie;
+    const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 

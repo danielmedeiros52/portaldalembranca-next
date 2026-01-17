@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { APP_LOGO, APP_TITLE } from "@/const";
+// TODO: Create @/const file with APP_LOGO and APP_TITLE
+const APP_LOGO = "/logo.png";
+const APP_TITLE = "Portal da Lembrança";
 import {
   Dialog,
   DialogContent,

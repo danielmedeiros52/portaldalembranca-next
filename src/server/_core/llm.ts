@@ -155,7 +155,7 @@ const normalizeMessage = (message: Message) => {
   const contentParts = ensureArray(message.content).map(normalizeContentPart);
 
   // If there's only text content, collapse to a single string for compatibility
-  if (contentParts.length === 1 && contentParts[0].type === "text") {
+  if (contentParts.length === 1 && contentParts[0]?.type === "text") {
     return {
       role,
       name,
@@ -195,7 +195,7 @@ const normalizeToolChoice = (
 
     return {
       type: "function",
-      function: { name: tools[0].function.name },
+      function: { name: tools[0]?.function.name || "" },
     };
   }
 

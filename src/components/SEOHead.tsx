@@ -128,8 +128,8 @@ export function generateMemorialSEO(memorial: {
   const deathYear = new Date(memorial.deathDate).getFullYear();
   
   // Extrair primeiro parágrafo da biografia para descrição
-  const firstParagraph = memorial.biography.split('\n\n')[0];
-  const description = firstParagraph.length > 160 
+  const firstParagraph = memorial.biography.split('\n\n')[0] || '';
+  const description = firstParagraph.length > 160
     ? firstParagraph.substring(0, 157) + '...'
     : firstParagraph;
   

@@ -113,7 +113,7 @@ export function generatePersonSchema(memorial: {
       '@type': 'Place',
       name: memorial.birthplace,
     },
-    description: memorial.biography.split('\n\n')[0].substring(0, 300),
+    description: (memorial.biography.split('\n\n')[0] || '').substring(0, 300),
     image: memorial.mainPhoto,
     url: `https://portaldalembranca.com.br/m/${memorial.slug}`,
   };
