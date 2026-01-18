@@ -773,6 +773,28 @@ const adminRouter = router({
     }),
 });
 
+// Payment Router for Stripe integration
+const paymentRouter = router({
+  createPaymentIntent: publicProcedure
+    .input(z.object({
+      planId: z.string(),
+      customerEmail: z.string().email().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { createPaymentIntent } = await import('~/server/payments');
+      return createPaymentIntent(input.planId, input.customerEmail || '');
+    }),
+
+  getPaymentStatus: publicProcedure
+    .input(z.object({
+      paymentIntentId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const { getPaymentIntentStatus } = await import('~/server/payments');
+      return getPaymentIntentStatus(input.paymentIntentId);
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -782,6 +804,7 @@ export const appRouter = router({
   dedication: dedicationRouter,
   lead: leadRouter,
   admin: adminRouter,
+  payment: paymentRouter,
 });
 
 export type AppRouter = typeof appRouter;
