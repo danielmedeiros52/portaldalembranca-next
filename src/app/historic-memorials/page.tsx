@@ -147,11 +147,22 @@ export default function HistoricMemorialsPage() {
 
                   {/* Content Section */}
                   <CardContent className="p-5 sm:p-6 flex flex-col flex-grow">
-                    {/* Title with Popular Name */}
+                    {/* Title with Popular Name - Show Popular Name as Main Title */}
                     <div className="mb-3">
-                      <h3 className="font-bold text-lg sm:text-xl text-gray-900 line-clamp-2 group-hover:text-teal-700 transition-colors">
-                        {getDisplayName(memorial)}
-                      </h3>
+                      {memorial.popularName ? (
+                        <>
+                          <h3 className="font-bold text-lg sm:text-xl text-teal-700 line-clamp-1 group-hover:text-teal-800 transition-colors">
+                            {memorial.popularName}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 mt-1">
+                            {memorial.fullName}
+                          </p>
+                        </>
+                      ) : (
+                        <h3 className="font-bold text-lg sm:text-xl text-gray-900 line-clamp-2 group-hover:text-teal-700 transition-colors">
+                          {memorial.fullName}
+                        </h3>
+                      )}
                     </div>
 
                     {/* Dates */}
