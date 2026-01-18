@@ -785,6 +785,25 @@ const paymentRouter = router({
       return createPaymentIntent(input.planId, input.customerEmail || '');
     }),
 
+  confirmPayment: publicProcedure
+    .input(z.object({
+      paymentIntentId: z.string(),
+      cardNumber: z.string(),
+      cardExp: z.string(),
+      cardCvc: z.string(),
+      cardName: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const { confirmPaymentWithCard } = await import('~/server/payments');
+      return confirmPaymentWithCard(
+        input.paymentIntentId,
+        input.cardNumber,
+        input.cardExp,
+        input.cardCvc,
+        input.cardName
+      );
+    }),
+
   getPaymentStatus: publicProcedure
     .input(z.object({
       paymentIntentId: z.string(),

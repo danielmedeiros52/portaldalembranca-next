@@ -19,6 +19,17 @@ vi.mock("~/trpc/react", () => ({
           isPending: false,
         }),
       },
+      confirmPayment: {
+        useMutation: () => ({
+          mutateAsync: vi.fn().mockResolvedValue({
+            id: "pi_test",
+            status: "succeeded",
+            amount: 1990,
+            currency: "brl",
+          }),
+          isPending: false,
+        }),
+      },
       getPaymentStatus: {
         useQuery: () => ({
           data: { status: "succeeded" },

@@ -82,6 +82,7 @@ function CheckoutContent() {
 
   // tRPC mutations
   const createPaymentMutation = api.payment.createPaymentIntent.useMutation();
+  const confirmPaymentMutation = api.payment.confirmPayment.useMutation();
 
   const planFromUrl = searchParams.get("plan");
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
@@ -173,27 +174,24 @@ function CheckoutContent() {
       // Step 2: Confirm payment with card details
       toast.loading("Processando pagamento com seu cartão...");
 
-      // Send card details to Stripe (in a real app, this would use Stripe.js Elements for PCI compliance)
-      const confirmResponse = await fetch("/api/trpc/payment.getPaymentStatus", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          json: { 
-            paymentIntentId: paymentResult.id,
-          },
-        }),
+      // Confirm the payment with card details
+      const confirmResult = await confirmPaymentMutation.mutateAsync({
+        paymentIntentId: paymentResult.id,
+        cardNumber,
+        cardExp,
+        cardCvc,
+        cardName,
       });
 
-      const confirmData = await confirmResponse.json();
-      const statusResult = confirmData.result?.data?.json || confirmData.result?.data;
-
-      if (statusResult?.status === "succeeded") {
+      if (confirmResult.status === "succeeded") {
         toast.success("Pagamento processado com sucesso!");
         setStep("success");
+      } else if (confirmResult.status === "requires_action") {
+        // Payment requires additional action (e.g., 3D Secure)
+        toast.error("Seu pagamento requer autenticação. Por favor, complete a verificação.");
+        setStep("payment");
       } else {
-        toast.error(`Pagamento pendente: ${statusResult?.status}`);
+        toast.error(`Pagamento pendente: ${confirmResult.status}`);
         setStep("payment");
       }
     } catch (error: any) {

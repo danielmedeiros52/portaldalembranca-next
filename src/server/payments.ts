@@ -122,3 +122,69 @@ export async function getPaymentIntentStatus(paymentIntentId: string) {
     currency: intent.currency,
   };
 }
+
+export async function confirmPaymentWithCard(
+  paymentIntentId: string,
+  cardNumber: string,
+  cardExp: string,
+  cardCvc: string,
+  cardName: string
+) {
+  if (!env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY not configured");
+  }
+
+  // Parse card expiry (MM/AA format)
+  const [expMonth, expYear] = cardExp.split("/");
+
+  if (!expMonth || !expYear) {
+    throw new Error("Invalid card expiry format");
+  }
+
+  const body = new URLSearchParams({
+    "payment_method[type]": "card",
+    "payment_method[card][number]": cardNumber.replace(/\s/g, ""),
+    "payment_method[card][exp_month]": expMonth,
+    "payment_method[card][exp_year]": "20" + expYear,
+    "payment_method[card][cvc]": cardCvc,
+    "payment_method[billing_details][name]": cardName,
+  });
+
+  const response = await fetch(
+    `https://api.stripe.com/v1/payment_intents/${paymentIntentId}/confirm`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Stripe API error:", error);
+    throw new Error(`Failed to confirm payment: ${error}`);
+  }
+
+  const intent = (await response.json()) as {
+    id: string;
+    status: string;
+    amount: number;
+    currency: string;
+    last_payment_error?: { message: string };
+  };
+
+  // Handle payment errors
+  if (intent.last_payment_error) {
+    throw new Error(`Payment failed: ${intent.last_payment_error.message}`);
+  }
+
+  return {
+    id: intent.id,
+    status: intent.status,
+    amount: intent.amount,
+    currency: intent.currency,
+  };
+}
