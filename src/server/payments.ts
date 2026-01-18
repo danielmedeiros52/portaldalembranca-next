@@ -45,7 +45,7 @@ export async function createPaymentIntent(
   const body = new URLSearchParams({
     amount: plan.price.toString(),
     currency: "brl",
-    payment_method_types: "card",
+    "payment_method_types[]": "card",
     description: plan.description,
     "metadata[plan_id]": planId,
     "metadata[product_id]": plan.productId,
