@@ -90,7 +90,10 @@ vi.mock("stripe", () => {
     },
   };
 
+  // Return a constructor function that returns the mock
   return {
-    default: vi.fn(() => mockStripe),
+    default: vi.fn(function(this: any) {
+      return mockStripe;
+    }),
   };
 });

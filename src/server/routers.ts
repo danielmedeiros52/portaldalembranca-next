@@ -788,19 +788,13 @@ const paymentRouter = router({
   confirmPayment: publicProcedure
     .input(z.object({
       paymentIntentId: z.string(),
-      cardNumber: z.string(),
-      cardExp: z.string(),
-      cardCvc: z.string(),
-      cardName: z.string(),
+      paymentMethodId: z.string().startsWith("pm_", "Payment method ID must start with 'pm_'"),
     }))
     .mutation(async ({ input }) => {
-      const { confirmPaymentWithCard } = await import('~/server/payments');
-      return confirmPaymentWithCard(
+      const { confirmPaymentWithPaymentMethod } = await import('~/server/payments');
+      return confirmPaymentWithPaymentMethod(
         input.paymentIntentId,
-        input.cardNumber,
-        input.cardExp,
-        input.cardCvc,
-        input.cardName
+        input.paymentMethodId
       );
     }),
 

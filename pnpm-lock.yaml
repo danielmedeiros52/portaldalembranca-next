@@ -29,6 +29,9 @@ importers:
       '@stripe/react-stripe-js':
         specifier: ^5.4.1
         version: 5.4.1(@stripe/stripe-js@8.6.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@stripe/stripe-js':
+        specifier: ^8.6.1
+        version: 8.6.1
       '@t3-oss/env-nextjs':
         specifier: ^0.12.0
         version: 0.12.0(typescript@5.9.3)(zod@3.25.76)

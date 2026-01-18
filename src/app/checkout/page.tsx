@@ -10,8 +10,19 @@ import {
   ArrowLeft, CreditCard, QrCode, Check, Loader2, Shield, Lock,
   Sparkles, Heart, Image, Users, Star
 } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { env } from "~/env";
 
 const APP_TITLE = "Portal da Lembrança";
+
+// Load Stripe outside of component to avoid recreating on every render
+const stripePromise = loadStripe(
+  env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
+).catch(() => {
+  console.error("Failed to load Stripe. Ensure NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is set.");
+  return null;
+});
 
 type PaymentMethod = "card" | "pix";
 type CheckoutStep = "plan" | "payment" | "processing" | "success";
@@ -74,11 +85,12 @@ function CheckoutContent() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExp, setCardExp] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [cardName, setCardName] = useState("");
+  const [cardholderName, setCardholderName] = useState("");
   const [paymentIntentId, setPaymentIntentId] = useState<string>("");
+
+  // Stripe hooks
+  const stripe = useStripe();
+  const elements = useElements();
 
   // tRPC mutations
   const createPaymentMutation = api.payment.createPaymentIntent.useMutation();
@@ -123,19 +135,12 @@ function CheckoutContent() {
     }
 
     if (paymentMethod === "card") {
-      if (!cardNumber || cardNumber.replace(/\s/g, "").length < 13) {
-        toast.error("Número do cartão inválido.");
+      if (!stripe || !elements) {
+        toast.error("Stripe não foi carregado. Recarregue a página.");
         return false;
       }
-      if (!cardExp || cardExp.length < 5) {
-        toast.error("Data de validade inválida (MM/AA).");
-        return false;
-      }
-      if (!cardCvc || cardCvc.length < 3) {
-        toast.error("CVV inválido.");
-        return false;
-      }
-      if (!cardName || cardName.trim().length < 3) {
+
+      if (!cardholderName || cardholderName.trim().length < 3) {
         toast.error("Nome do titular é obrigatório.");
         return false;
       }
@@ -146,6 +151,11 @@ function CheckoutContent() {
 
   const handleProcessPayment = async () => {
     if (!selectedPlanId || !validatePaymentForm()) {
+      return;
+    }
+
+    if (!stripe || !elements) {
+      toast.error("Stripe não foi carregado. Recarregue a página.");
       return;
     }
 
@@ -171,16 +181,46 @@ function CheckoutContent() {
       setPaymentIntentId(paymentResult.id);
       toast.success("Intenção de pagamento criada", { id: toastId });
 
-      // Step 2: Confirm payment with card details
-      toast.loading("Processando pagamento com seu cartão...");
+      // Step 2: Create payment method using Stripe.js (client-side, secure)
+      toast.loading("Validando informações do cartão...");
 
-      // Confirm the payment with card details
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        toast.error("Elemento do cartão não encontrado");
+        setStep("payment");
+        setIsLoading(false);
+        return;
+      }
+
+      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+        type: "card",
+        card: cardElement,
+        billing_details: {
+          name: cardholderName,
+          email: customerEmail,
+        },
+      });
+
+      if (pmError) {
+        toast.error(pmError.message || "Erro ao validar cartão");
+        setStep("payment");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!paymentMethod) {
+        toast.error("Falha ao criar método de pagamento");
+        setStep("payment");
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 3: Confirm payment with payment method ID (secure - no card data sent to backend)
+      toast.loading("Processando pagamento...");
+
       const confirmResult = await confirmPaymentMutation.mutateAsync({
         paymentIntentId: paymentResult.id,
-        cardNumber,
-        cardExp,
-        cardCvc,
-        cardName,
+        paymentMethodId: paymentMethod.id,
       });
 
       if (confirmResult.status === "succeeded") {
@@ -401,73 +441,50 @@ function CheckoutContent() {
                       </div>
                     </div>
 
-                    {/* Card Form */}
+                    {/* Card Form with Stripe Elements */}
                     {paymentMethod === "card" && (
                       <div className="space-y-4 pt-4 border-t">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Número do Cartão
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              value={cardNumber}
-                              onChange={(e) => setCardNumber(e.target.value)}
-                              placeholder="0000 0000 0000 0000"
-                              maxLength={19}
-                              className="input-modern pl-10 w-full"
-                            />
-                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Validade (MM/AA)
-                            </label>
-                            <input
-                              type="text"
-                              value={cardExp}
-                              onChange={(e) => {
-                                let val = e.target.value.replace(/\D/g, '');
-                                if (val.length >= 2) {
-                                  val = val.substring(0, 2) + '/' + val.substring(2, 4);
-                                }
-                                setCardExp(val);
-                              }}
-                              placeholder="MM/AA"
-                              maxLength={5}
-                              className="input-modern"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              CVV
-                            </label>
-                            <input
-                              type="text"
-                              value={cardCvc}
-                              onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 4))}
-                              placeholder="123"
-                              maxLength={4}
-                              className="input-modern"
-                            />
-                          </div>
-                        </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Nome do Titular
                           </label>
                           <input
                             type="text"
-                            value={cardName}
-                            onChange={(e) => setCardName(e.target.value)}
+                            value={cardholderName}
+                            onChange={(e) => setCardholderName(e.target.value)}
                             placeholder="Como está no cartão"
                             className="input-modern w-full"
                           />
                         </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Informações do Cartão
+                          </label>
+                          <div className="border rounded-lg p-3 bg-white">
+                            <CardElement
+                              options={{
+                                style: {
+                                  base: {
+                                    fontSize: "16px",
+                                    color: "#374151",
+                                    "::placeholder": {
+                                      color: "#9CA3AF",
+                                    },
+                                    fontFamily: "ui-sans-serif, system-ui, sans-serif",
+                                  },
+                                  invalid: {
+                                    color: "#EF4444",
+                                  },
+                                },
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Stripe Elements fornece validação em tempo real
+                          </p>
+                        </div>
                         <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> Seu cartão é seguro com Stripe
+                          <Lock className="w-3 h-3" /> Seu cartão é seguro com Stripe. Seus dados não passam pelo nosso servidor.
                         </p>
                       </div>
                     )}
@@ -559,7 +576,9 @@ export default function CheckoutPage() {
         <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
       </div>
     }>
-      <CheckoutContent />
+      <Elements stripe={stripePromise}>
+        <CheckoutContent />
+      </Elements>
     </Suspense>
   );
 }

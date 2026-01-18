@@ -1,8 +1,12 @@
 import { env } from "~/env";
 import Stripe from "stripe";
 
+if (!env.STRIPE_SECRET_KEY) {
+  throw new Error("STRIPE_SECRET_KEY is not defined in environment variables");
+}
+
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-12-27.acacia",
+  apiVersion: "2025-12-15.clover",
 });
 
 const STRIPE_PRODUCTS: Record<
@@ -75,37 +79,28 @@ export async function getPaymentIntentStatus(paymentIntentId: string) {
   };
 }
 
-export async function confirmPaymentWithCard(
+/**
+ * Confirms a payment intent with a payment method ID.
+ *
+ * SECURITY: This function accepts only a payment method ID, not raw card data.
+ * The payment method should be created on the client side using Stripe.js/Elements
+ * to ensure PCI compliance and security.
+ *
+ * @param paymentIntentId - The Stripe payment intent ID
+ * @param paymentMethodId - The payment method ID created by Stripe.js on the client
+ * @returns Payment intent details
+ */
+export async function confirmPaymentWithPaymentMethod(
   paymentIntentId: string,
-  cardNumber: string,
-  cardExp: string,
-  cardCvc: string,
-  cardName: string
+  paymentMethodId: string
 ) {
-  // Parse card expiry (MM/AA format)
-  const [expMonth, expYear] = cardExp.split("/");
-
-  if (!expMonth || !expYear) {
-    throw new Error("Invalid card expiry format");
+  if (!paymentMethodId || !paymentMethodId.startsWith("pm_")) {
+    throw new Error("Invalid payment method ID. Must be created using Stripe.js");
   }
 
-  // Step 1: Create a payment method using Stripe SDK
-  const paymentMethod = await stripe.paymentMethods.create({
-    type: "card",
-    card: {
-      number: cardNumber.replace(/\s/g, ""),
-      exp_month: parseInt(expMonth),
-      exp_year: parseInt("20" + expYear),
-      cvc: cardCvc,
-    },
-    billing_details: {
-      name: cardName,
-    },
-  });
-
-  // Step 2: Confirm the payment intent with the payment method
+  // Confirm the payment intent with the payment method
   const intent = await stripe.paymentIntents.confirm(paymentIntentId, {
-    payment_method: paymentMethod.id,
+    payment_method: paymentMethodId,
   });
 
   return {
