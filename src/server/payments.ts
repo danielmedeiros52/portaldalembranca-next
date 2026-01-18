@@ -141,14 +141,36 @@ export async function confirmPaymentWithCard(
     throw new Error("Invalid card expiry format");
   }
 
-  // Build form-encoded body manually to ensure proper encoding
-  const params = new URLSearchParams();
-  params.append("payment_method[type]", "card");
-  params.append("payment_method[card][number]", cardNumber.replace(/\s/g, ""));
-  params.append("payment_method[card][exp_month]", expMonth);
-  params.append("payment_method[card][exp_year]", "20" + expYear);
-  params.append("payment_method[card][cvc]", cardCvc);
-  params.append("payment_method[billing_details][name]", cardName);
+  // Step 1: Create a payment method with the card details
+  const paymentMethodParams = new URLSearchParams();
+  paymentMethodParams.append("type", "card");
+  paymentMethodParams.append("card[number]", cardNumber.replace(/\s/g, ""));
+  paymentMethodParams.append("card[exp_month]", expMonth);
+  paymentMethodParams.append("card[exp_year]", "20" + expYear);
+  paymentMethodParams.append("card[cvc]", cardCvc);
+  paymentMethodParams.append("billing_details[name]", cardName);
+
+  const pmResponse = await fetch("https://api.stripe.com/v1/payment_methods", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: paymentMethodParams.toString(),
+  });
+
+  if (!pmResponse.ok) {
+    const error = await pmResponse.text();
+    console.error("Stripe payment method creation error:", error);
+    throw new Error(`Failed to create payment method: ${error}`);
+  }
+
+  const paymentMethodData = (await pmResponse.json()) as { id: string };
+  const paymentMethodId = paymentMethodData.id;
+
+  // Step 2: Confirm the payment intent with the payment method ID
+  const confirmParams = new URLSearchParams();
+  confirmParams.append("payment_method", paymentMethodId);
 
   const response = await fetch(
     `https://api.stripe.com/v1/payment_intents/${paymentIntentId}/confirm`,
@@ -158,7 +180,7 @@ export async function confirmPaymentWithCard(
         Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: params.toString(),
+      body: confirmParams.toString(),
     }
   );
 
