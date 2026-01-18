@@ -239,6 +239,18 @@ const memorialRouter = router({
       return db.getHistoricMemorials();
     }),
 
+  // Debug: Get all historical memorials (any status/visibility)
+  debugAllHistorical: publicProcedure
+    .query(async () => {
+      return db.getAllHistoricalMemorials();
+    }),
+
+  // Debug: Get all memorials
+  debugAll: publicProcedure
+    .query(async () => {
+      return db.getAllMemorials();
+    }),
+
   // List memorials for current user (auto-detects user type)
   list: protectedProcedure
     .query(async ({ ctx }) => {

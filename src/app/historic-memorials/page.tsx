@@ -5,13 +5,30 @@ import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { api } from "~/trpc/react";
-import { Calendar, MapPin, Search, Loader2, ArrowLeft, Heart, Sparkles } from "lucide-react";
+import { Calendar, MapPin, Search, Loader2, ArrowLeft, Heart, Sparkles, AlertCircle } from "lucide-react";
 
 export default function HistoricMemorialsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDebug, setShowDebug] = useState(false);
 
-  const { data: memorials, isLoading } = api.memorial.getHistoricMemorials.useQuery();
+  const { data: memorials, isLoading, error } = api.memorial.getHistoricMemorials.useQuery(undefined, {
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+  const { data: debugAllHistorical } = api.memorial.debugAllHistorical.useQuery(undefined, {
+    enabled: showDebug,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+  const { data: debugAll } = api.memorial.debugAll.useQuery(undefined, {
+    enabled: showDebug,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   const filteredMemorials = memorials?.filter(m =>
     m.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -199,6 +216,46 @@ export default function HistoricMemorialsPage() {
                 Limpar busca
               </Button>
             )}
+            
+            {/* Debug Info */}
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowDebug(!showDebug)}
+                className="text-xs text-gray-500"
+              >
+                {showDebug ? "Ocultar" : "Mostrar"} Informações de Debug
+              </Button>
+              
+              {showDebug && (
+                <div className="mt-6 text-left bg-gray-50 rounded-lg p-4 space-y-4 max-w-2xl mx-auto">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Memoriais Históricos (Filtrado):</p>
+                    <pre className="text-xs bg-white p-3 rounded border border-gray-200 overflow-auto max-h-48">
+                      {JSON.stringify(memorials || [], null, 2)}
+                    </pre>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Todos os Memoriais Históricos (Sem Status/Visibility):</p>
+                    <pre className="text-xs bg-white p-3 rounded border border-gray-200 overflow-auto max-h-48">
+                      {JSON.stringify(debugAllHistorical || [], null, 2)}
+                    </pre>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Todos os Memoriais (Sem Filtro):</p>
+                    <pre className="text-xs bg-white p-3 rounded border border-gray-200 overflow-auto max-h-48">
+                      {JSON.stringify(debugAll?.slice(0, 5) || [], null, 2)}
+                    </pre>
+                    {debugAll && debugAll.length > 5 && (
+                      <p className="text-xs text-gray-500 mt-2">... e mais {debugAll.length - 5} memoriais</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>

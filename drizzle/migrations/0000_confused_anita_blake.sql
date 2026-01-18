@@ -96,10 +96,11 @@ VALUES (
 );
 --> statement-breakpoint
 -- Seed data: Historical Memorial - Chico Science
-INSERT INTO "memorials" ("slug", "full_name", "birth_date", "death_date", "birthplace", "filiation", "biography", "visibility", "status", "funeral_home_id", "createdAt", "updatedAt")
+INSERT INTO "memorials" ("slug", "full_name", "popular_name", "birth_date", "death_date", "birthplace", "filiation", "biography", "visibility", "status", "funeral_home_id", "is_historical", "createdAt", "updatedAt")
 VALUES (
 	'chico-science',
 	'Francisco de Assis França',
+	'Chico Science',
 	'13/03/1966',
 	'02/02/1997',
 	'Recife, Pernambuco',
@@ -108,6 +109,7 @@ VALUES (
 	'public',
 	'active',
 	1,
+	true,
 	now(),
 	now()
 );

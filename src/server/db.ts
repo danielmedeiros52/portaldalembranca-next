@@ -179,15 +179,32 @@ export async function getPublicMemorials(): Promise<Memorial[]> {
 }
 
 // Get all historical memorials (public and active)
+// Get all historical memorials (public, regardless of status for now)
 export async function getHistoricMemorials(): Promise<Memorial[]> {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(memorials)
     .where(and(
-      eq(memorials.status, 'active'),
       eq(memorials.visibility, 'public'),
       eq(memorials.isHistorical, true)
     ))
+    .orderBy(desc(memorials.createdAt));
+}
+
+// Debug: Get all memorials with historical flag (any status/visibility)
+export async function getAllHistoricalMemorials(): Promise<Memorial[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(memorials)
+    .where(eq(memorials.isHistorical, true))
+    .orderBy(desc(memorials.createdAt));
+}
+
+// Debug: Get all memorials (for debugging)
+export async function getAllMemorials(): Promise<Memorial[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(memorials)
     .orderBy(desc(memorials.createdAt));
 }
 
