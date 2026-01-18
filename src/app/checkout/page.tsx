@@ -184,10 +184,8 @@ function CheckoutContent() {
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Step 4: Check payment status by calling the tRPC endpoint directly
-      const statusParams = new URLSearchParams({
-        input: JSON.stringify({ paymentIntentId: paymentResult.id }),
-      });
-      const statusResponse = await fetch(`/api/trpc/payment.getPaymentStatus?${statusParams}`, {
+      const inputJson = encodeURIComponent(JSON.stringify({ paymentIntentId: paymentResult.id }));
+      const statusResponse = await fetch(`/api/trpc/payment.getPaymentStatus?input=${inputJson}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
