@@ -195,7 +195,7 @@ function CheckoutContent() {
       });
 
       const statusData = await statusResponse.json();
-      const statusResult = statusData.result?.data;
+      const statusResult = statusData.result?.data?.json || statusData.result?.data;
 
       if (!statusResult) {
         toast.error("Erro ao verificar status do pagamento");
