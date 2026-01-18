@@ -51,3 +51,46 @@ vi.mock("next/headers", () => ({
     delete: vi.fn(),
   }),
 }));
+
+// Mock Stripe SDK
+vi.mock("stripe", () => {
+  const mockStripe = {
+    paymentIntents: {
+      create: vi.fn(async (params) => ({
+        id: "pi_test_" + Math.random().toString(36).substr(2, 9),
+        client_secret: "secret_test_" + Math.random().toString(36).substr(2, 9),
+        amount: params.amount,
+        currency: params.currency,
+        status: "requires_payment_method",
+        metadata: params.metadata,
+        receipt_email: params.receipt_email,
+      })),
+      retrieve: vi.fn(async (id) => ({
+        id,
+        status: "requires_payment_method",
+        amount: 1990,
+        currency: "brl",
+      })),
+      confirm: vi.fn(async (id, params) => ({
+        id,
+        status: "succeeded",
+        amount: 1990,
+        currency: "brl",
+      })),
+    },
+    paymentMethods: {
+      create: vi.fn(async (params) => ({
+        id: "pm_test_" + Math.random().toString(36).substr(2, 9),
+        type: params.type,
+        card: {
+          last4: params.card?.number?.slice(-4),
+          brand: "visa",
+        },
+      })),
+    },
+  };
+
+  return {
+    default: vi.fn(() => mockStripe),
+  };
+});
