@@ -183,12 +183,25 @@ function CheckoutContent() {
       // For demo purposes, we'll just wait a bit and assume success
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Step 4: Check payment status
-      // Use the tRPC utils to manually fetch the query
-      const utils = api.useUtils();
-      const statusResult = await utils.payment.getPaymentStatus.fetch({
-        paymentIntentId: paymentResult.id,
+      // Step 4: Check payment status by calling the tRPC endpoint directly
+      const statusResponse = await fetch("/api/trpc/payment.getPaymentStatus", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          json: { paymentIntentId: paymentResult.id },
+        }),
       });
+
+      const statusData = await statusResponse.json();
+      const statusResult = statusData.result?.data;
+
+      if (!statusResult) {
+        toast.error("Erro ao verificar status do pagamento");
+        setStep("payment");
+        return;
+      }
 
       if (statusResult.status === "succeeded") {
         toast.success("Pagamento processado com sucesso!");
