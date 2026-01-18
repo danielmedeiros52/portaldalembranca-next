@@ -12,17 +12,15 @@ import {
 } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { env } from "~/env";
 
 const APP_TITLE = "Portal da Lembrança";
 
 // Load Stripe outside of component to avoid recreating on every render
-const stripePromise = loadStripe(
-  env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
-).catch(() => {
-  console.error("Failed to load Stripe. Ensure NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is set.");
-  return null;
-});
+// Use process.env directly for client-side access to NEXT_PUBLIC_ variables
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey
+  ? loadStripe(stripePublishableKey)
+  : null;
 
 type PaymentMethod = "card" | "pix";
 type CheckoutStep = "plan" | "payment" | "processing" | "success";
@@ -444,6 +442,14 @@ function CheckoutContent() {
                     {/* Card Form with Stripe Elements */}
                     {paymentMethod === "card" && (
                       <div className="space-y-4 pt-4 border-t">
+                        {!stripe && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                            <p className="text-sm text-yellow-800 flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Carregando Stripe...
+                            </p>
+                          </div>
+                        )}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Nome do Titular
@@ -454,6 +460,7 @@ function CheckoutContent() {
                             onChange={(e) => setCardholderName(e.target.value)}
                             placeholder="Como está no cartão"
                             className="input-modern w-full"
+                            disabled={!stripe}
                           />
                         </div>
                         <div>
@@ -461,23 +468,29 @@ function CheckoutContent() {
                             Informações do Cartão
                           </label>
                           <div className="border rounded-lg p-3 bg-white">
-                            <CardElement
-                              options={{
-                                style: {
-                                  base: {
-                                    fontSize: "16px",
-                                    color: "#374151",
-                                    "::placeholder": {
-                                      color: "#9CA3AF",
+                            {stripe ? (
+                              <CardElement
+                                options={{
+                                  style: {
+                                    base: {
+                                      fontSize: "16px",
+                                      color: "#374151",
+                                      "::placeholder": {
+                                        color: "#9CA3AF",
+                                      },
+                                      fontFamily: "ui-sans-serif, system-ui, sans-serif",
                                     },
-                                    fontFamily: "ui-sans-serif, system-ui, sans-serif",
+                                    invalid: {
+                                      color: "#EF4444",
+                                    },
                                   },
-                                  invalid: {
-                                    color: "#EF4444",
-                                  },
-                                },
-                              }}
-                            />
+                                }}
+                              />
+                            ) : (
+                              <div className="py-3 text-center text-gray-400">
+                                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                              </div>
+                            )}
                           </div>
                           <p className="text-xs text-gray-500 mt-2">
                             Stripe Elements fornece validação em tempo real
@@ -504,12 +517,17 @@ function CheckoutContent() {
                     <Button
                       onClick={handleProcessPayment}
                       className="w-full btn-primary"
-                      disabled={isLoading}
+                      disabled={isLoading || (paymentMethod === "card" && !stripe)}
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Processando...
+                        </>
+                      ) : (paymentMethod === "card" && !stripe) ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Aguardando Stripe...
                         </>
                       ) : (
                         <>
@@ -570,6 +588,29 @@ function CheckoutContent() {
 }
 
 export default function CheckoutPage() {
+  // Show error if Stripe is not configured
+  if (!stripePromise) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-red-600">Stripe não configurado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 mb-4">
+              A chave pública do Stripe não está configurada. Configure a variável de ambiente{" "}
+              <code className="bg-gray-100 px-2 py-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>{" "}
+              para habilitar pagamentos.
+            </p>
+            <Button onClick={() => window.location.href = "/"} className="w-full">
+              Voltar ao Início
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

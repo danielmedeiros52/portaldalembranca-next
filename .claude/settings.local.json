@@ -6,7 +6,12 @@
       "Bash(docker:*)",
       "Bash(make:*)",
       "Bash(node --version:*)",
-      "Bash(pnpm:*)"
+      "Bash(pnpm:*)",
+      "Bash(if [ -f .env ])",
+      "Bash(then grep -i \"STRIPE\" .env)",
+      "Bash(else echo \".env file not found\")",
+      "Bash(fi)",
+      "Bash(test:*)"
     ]
   }
 }
