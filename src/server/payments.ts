@@ -1,24 +1,28 @@
 import { env } from "~/env";
 
-const PLAN_PRICES: Record<
+const STRIPE_PRODUCTS: Record<
   string,
   {
+    productId: string;
     price: number;
     name: string;
     description: string;
   }
 > = {
   essencial: {
+    productId: "prod_TiiUFKT7NvAWvA",
     price: 1990,
     name: "Memorial Essencial",
     description: "1 Memorial Digital com até 10 fotos",
   },
   premium: {
+    productId: "prod_Tihb3SipDs4nOP",
     price: 9990,
     name: "Memorial Premium",
     description: "1 Memorial com galeria ilimitada",
   },
   familia: {
+    productId: "prod_TiiVZKqHg334zv",
     price: 24990,
     name: "Plano Família",
     description: "Até 5 memoriais com tudo do premium",
@@ -33,7 +37,7 @@ export async function createPaymentIntent(
     throw new Error("STRIPE_SECRET_KEY not configured");
   }
 
-  const plan = PLAN_PRICES[planId];
+  const plan = STRIPE_PRODUCTS[planId];
   if (!plan) {
     throw new Error(`Plan ${planId} not found`);
   }
@@ -44,6 +48,7 @@ export async function createPaymentIntent(
     payment_method_types: "card",
     description: plan.description,
     "metadata[plan_id]": planId,
+    "metadata[product_id]": plan.productId,
   });
 
   if (customerEmail) {
