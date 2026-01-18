@@ -789,7 +789,7 @@ const paymentRouter = router({
     .input(z.object({
       paymentIntentId: z.string(),
     }))
-    .query(async ({ input }) => {
+    .mutation(async ({ input }) => {
       const { getPaymentIntentStatus } = await import('~/server/payments');
       return getPaymentIntentStatus(input.paymentIntentId);
     }),
