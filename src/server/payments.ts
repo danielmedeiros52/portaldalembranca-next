@@ -141,14 +141,14 @@ export async function confirmPaymentWithCard(
     throw new Error("Invalid card expiry format");
   }
 
-  const body = new URLSearchParams({
-    "payment_method[type]": "card",
-    "payment_method[card][number]": cardNumber.replace(/\s/g, ""),
-    "payment_method[card][exp_month]": expMonth,
-    "payment_method[card][exp_year]": "20" + expYear,
-    "payment_method[card][cvc]": cardCvc,
-    "payment_method[billing_details][name]": cardName,
-  });
+  // Build form-encoded body manually to ensure proper encoding
+  const params = new URLSearchParams();
+  params.append("payment_method[type]", "card");
+  params.append("payment_method[card][number]", cardNumber.replace(/\s/g, ""));
+  params.append("payment_method[card][exp_month]", expMonth);
+  params.append("payment_method[card][exp_year]", "20" + expYear);
+  params.append("payment_method[card][cvc]", cardCvc);
+  params.append("payment_method[billing_details][name]", cardName);
 
   const response = await fetch(
     `https://api.stripe.com/v1/payment_intents/${paymentIntentId}/confirm`,
@@ -158,7 +158,7 @@ export async function confirmPaymentWithCard(
         Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body,
+      body: params.toString(),
     }
   );
 
