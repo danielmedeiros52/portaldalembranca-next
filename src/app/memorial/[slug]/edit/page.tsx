@@ -19,7 +19,7 @@ export default function MemorialEditPage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  const { data: memorial, isLoading } = api.memorial.getBySlug.useQuery({ slug });
+  const { data: memorial, isLoading, refetch } = api.memorial.getBySlug.useQuery({ slug });
   const [activeTab, setActiveTab] = useState("info");
   const [showAddDescendant, setShowAddDescendant] = useState(false);
   const [showAddPhoto, setShowAddPhoto] = useState(false);
