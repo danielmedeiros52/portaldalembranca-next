@@ -202,9 +202,9 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
+          <div className="flex justify-center max-w-5xl mx-auto">
             {/* Plan 1 - Essencial */}
-            <div className="card-modern p-6 fade-in stagger-1">
+            <div className="card-modern p-6 fade-in stagger-1 max-w-md w-full">
               <div className="text-center mb-6">
                 <div className="w-14 h-14 rounded-2xl bg-teal-100 flex items-center justify-center mx-auto mb-4">
                   <Heart className="w-7 h-7 text-teal-600" />
@@ -244,111 +244,6 @@ export default function HomePage() {
                 className="w-full btn-outline"
               >
                 Criar Memorial
-              </Button>
-            </div>
-
-            {/* Plan 2 - Premium (Popular) */}
-            <div className="card-modern p-6 fade-in stagger-2 relative border-2 border-teal-600 sm:-mt-4 sm:mb-4">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-teal-600 text-white text-xs font-medium rounded-full flex items-center gap-1">
-                <Star className="w-3 h-3" />
-                Mais Popular
-              </div>
-              <div className="text-center mb-6">
-                <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Memorial Premium</h3>
-                <p className="text-sm text-gray-500 mb-4">Recursos completos com placa física para homenagens especiais</p>
-                <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-3xl font-bold text-gray-900">R$ 99,90</span>
-                  <span className="text-gray-500 text-sm">/ano</span>
-                </div>
-                <p className="text-xs text-emerald-600 mt-2 font-medium">
-                  A partir do 2º ano: R$ 29,90/ano
-                </p>
-              </div>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Tudo do plano Essencial
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Fotos ilimitadas
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Galeria de vídeos
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Árvore genealógica
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  <strong>Placa física com QR Code</strong>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Suporte prioritário
-                </li>
-              </ul>
-              <Button
-                onClick={() => router.push("/login?plan=premium")}
-                className="w-full btn-primary"
-              >
-                Escolher Premium
-              </Button>
-            </div>
-
-            {/* Plan 3 - Família */}
-            <div className="card-modern p-6 fade-in stagger-3">
-              <div className="text-center mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-7 h-7 text-rose-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Plano Família</h3>
-                <p className="text-sm text-gray-500 mb-4">Para famílias que desejam preservar múltiplas memórias</p>
-                <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-3xl font-bold text-gray-900">R$ 249,90</span>
-                  <span className="text-gray-500 text-sm">/ano</span>
-                </div>
-                <p className="text-xs text-emerald-600 mt-2 font-medium">
-                  A partir do 2º ano: R$ 59,90/ano
-                </p>
-              </div>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Até 5 memoriais completos
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Árvore genealógica conectada
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Backup em nuvem
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Domínio personalizado
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  <strong>5 placas físicas com QR Code</strong>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Suporte VIP 24/7
-                </li>
-              </ul>
-              <Button
-                onClick={() => router.push("/login?plan=familia")}
-                variant="outline"
-                className="w-full btn-outline"
-              >
-                Escolher Família
               </Button>
             </div>
           </div>
@@ -528,10 +423,9 @@ export default function HomePage() {
               <span className="text-xl font-bold">{APP_TITLE}</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-400 text-sm sm:text-base">
-              <a href="#" className="hover:text-white transition-colors">Sobre</a>
-              <a href="#" className="hover:text-white transition-colors">Contato</a>
-              <a href="#" className="hover:text-white transition-colors">Privacidade</a>
-              <a href="#" className="hover:text-white transition-colors">Termos</a>
+              <a href="/support" className="hover:text-white transition-colors">Suporte</a>
+              <a href="/privacy" className="hover:text-white transition-colors">Privacidade</a>
+              <a href="/terms" className="hover:text-white transition-colors">Termos</a>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500">
