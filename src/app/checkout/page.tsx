@@ -33,46 +33,14 @@ const plans = [
     price: 19.90,
     period: "ano",
     features: [
-      "1 Memorial Digital",
-      "Galeria de até 10 fotos",
-      "QR Code personalizado",
+      "Página memorial personalizada",
+      "Galeria com até 10 fotos",
+      "Biografia e história completa",
+      "QR Code para acesso digital",
       "Compartilhamento ilimitado",
-      "Dedicações públicas"
-    ],
-    popular: false
-  },
-  {
-    id: "premium",
-    name: "Memorial Premium",
-    price: 99.90,
-    period: "ano",
-    features: [
-      "1 Memorial Digital",
-      "Galeria ilimitada de fotos",
-      "QR Code personalizado",
-      "Linha do tempo interativa",
-      "Vídeos e áudios",
-      "Mapa de localização",
-      "Dedicações públicas",
-      "Suporte prioritário"
+      "Dedicações e homenagens"
     ],
     popular: true
-  },
-  {
-    id: "familia",
-    name: "Plano Família",
-    price: 249.90,
-    period: "ano",
-    features: [
-      "Até 5 Memoriais",
-      "Tudo do plano Premium",
-      "Árvore genealógica",
-      "Documentos históricos",
-      "Acesso compartilhado",
-      "Backup em nuvem",
-      "Suporte dedicado"
-    ],
-    popular: false
   }
 ];
 
@@ -115,10 +83,9 @@ function CheckoutContent() {
       }
     }
 
-    // Pre-select popular plan
-    const popularPlan = plans.find(p => p.popular);
-    if (popularPlan) {
-      setSelectedPlanId(popularPlan.id);
+    // Auto-select the only available plan (essencial)
+    if (plans.length > 0 && !selectedPlanId) {
+      setSelectedPlanId(plans[0].id);
     }
   }, [planFromUrl]);
 
@@ -397,7 +364,16 @@ function CheckoutContent() {
       <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
-            onClick={() => step === "plan" ? router.push("/") : setStep("plan")}
+            onClick={() => {
+              if (step === "plan") {
+                router.push("/");
+              } else if (step === "payment" && planFromUrl) {
+                // If came from landing page with plan in URL, go back to homepage
+                router.push("/");
+              } else {
+                setStep("plan");
+              }
+            }}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -417,31 +393,19 @@ function CheckoutContent() {
           <div>
             <div className="text-center mb-12">
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                Escolha seu plano
+                Memorial Essencial
               </h1>
               <p className="text-lg text-gray-600">
-                Selecione o plano ideal para preservar suas memórias
+                Plano completo por apenas R$ 19,90/ano
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="flex justify-center mb-8">
               {plans.map((plan) => (
                 <Card
                   key={plan.id}
-                  className={`relative cursor-pointer transition-all ${
-                    selectedPlanId === plan.id
-                      ? "ring-2 ring-teal-600 shadow-lg"
-                      : "hover:shadow-lg"
-                  } ${plan.popular ? "border-teal-600" : ""}`}
-                  onClick={() => handleSelectPlan(plan.id)}
+                  className="relative transition-all ring-2 ring-teal-600 shadow-lg max-w-md w-full"
                 >
-                  {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <span className="px-4 py-1 bg-teal-600 text-white text-sm font-medium rounded-full">
-                        Mais Popular
-                      </span>
-                    </div>
-                  )}
                   <CardHeader>
                     <CardTitle className="text-center">
                       <div className="mb-4">
@@ -456,7 +420,7 @@ function CheckoutContent() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-3">
+                    <ul className="space-y-3 mb-6">
                       {plan.features.map((feature, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <Check className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
@@ -464,6 +428,9 @@ function CheckoutContent() {
                         </li>
                       ))}
                     </ul>
+                    <p className="text-xs text-center text-gray-500 pt-4 border-t">
+                      Pagamento seguro via PIX ou cartão de crédito
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -473,7 +440,6 @@ function CheckoutContent() {
               <Button
                 onClick={handleContinueToPayment}
                 className="btn-primary px-8 py-3 text-lg"
-                disabled={!selectedPlanId}
               >
                 Continuar para Pagamento
               </Button>

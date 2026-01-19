@@ -94,6 +94,7 @@ export const memorials = pgTable("memorials", {
   funeralHomeId: integer("funeral_home_id"),
   familyUserId: integer("family_user_id"),
   isHistorical: boolean("is_historical").default(false).notNull(),
+  isFeatured: boolean("is_featured").default(false).notNull(),
   category: varchar("category", { length: 100 }),
   graveLocation: varchar("grave_location", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

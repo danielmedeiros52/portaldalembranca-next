@@ -36,6 +36,20 @@
       "when": 1768773060916,
       "tag": "0004_conscious_nightmare",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1768827250165,
+      "tag": "0005_thick_hemingway",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1768827251000,
+      "tag": "0006_mark_featured_memorials",
+      "breakpoints": true
     }
   ]
 }

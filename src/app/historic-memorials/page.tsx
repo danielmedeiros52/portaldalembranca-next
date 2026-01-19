@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { api } from "~/trpc/react";
-import { Calendar, MapPin, Search, Loader2, ArrowLeft, Heart, Sparkles, AlertCircle } from "lucide-react";
+import { Calendar, MapPin, Search, Loader2, ArrowLeft, Heart, Sparkles, AlertCircle, Star } from "lucide-react";
 
 export default function HistoricMemorialsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showDebug, setShowDebug] = useState(false);
 
   const { data: memorials, isLoading, error } = api.memorial.getHistoricMemorials.useQuery(undefined, {
@@ -30,11 +31,22 @@ export default function HistoricMemorialsPage() {
     refetchOnMount: false,
   });
 
-  const filteredMemorials = memorials?.filter(m =>
-    m.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (m.popularName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-    (m.biography?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-  );
+  const filteredMemorials = memorials?.filter(m => {
+    const matchesSearch = m.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.popularName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+      (m.biography?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+
+    const matchesCategory = selectedCategory === "all" || m.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  // Get unique categories from memorials
+  const categories = Array.from(new Set(memorials?.map(m => m.category).filter(Boolean) as string[])).sort();
+
+  // Separate featured and regular memorials
+  const featuredMemorials = filteredMemorials?.filter(m => m.isFeatured) || [];
+  const regularMemorials = filteredMemorials?.filter(m => !m.isFeatured) || [];
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -103,6 +115,35 @@ export default function HistoricMemorialsPage() {
               />
             </div>
           </div>
+
+          {/* Category Filter */}
+          {categories.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  selectedCategory === "all"
+                    ? "bg-teal-600 text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                Todos
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    selectedCategory === category
+                      ? "bg-teal-600 text-white shadow-md"
+                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
@@ -110,14 +151,132 @@ export default function HistoricMemorialsPage() {
       <main className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         {filteredMemorials && filteredMemorials.length > 0 ? (
           <>
-            <div className="mb-8 flex items-center gap-2 text-sm text-gray-600">
-              <Sparkles className="w-4 h-4 text-teal-600" />
-              <span>
-                {filteredMemorials.length} memorial{filteredMemorials.length !== 1 ? 'is' : ''} encontrado{filteredMemorials.length !== 1 ? 's' : ''}
-              </span>
+            <div className="mb-8 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Sparkles className="w-4 h-4 text-teal-600" />
+                <span>
+                  {filteredMemorials.length} memorial{filteredMemorials.length !== 1 ? 'is' : ''} encontrado{filteredMemorials.length !== 1 ? 's' : ''}
+                  {selectedCategory !== "all" && ` em ${selectedCategory}`}
+                </span>
+              </div>
+              {(searchQuery || selectedCategory !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("all");
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Limpar filtros
+                </Button>
+              )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-              {filteredMemorials.map((memorial) => (
+
+            {/* Featured Memorials Section */}
+            {featuredMemorials.length > 0 && (
+              <section className="mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                  <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
+                  <h2 className="text-2xl font-bold text-gray-900">Memoriais em Destaque</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                  {featuredMemorials.map((memorial) => (
+                    <Card
+                      key={memorial.id}
+                      className="group cursor-pointer hover:shadow-2xl transition-all duration-300 border-2 border-amber-400 overflow-hidden flex flex-col h-full relative"
+                      onClick={() => router.push(`/memorial/${memorial.slug}`)}
+                    >
+                      {/* Featured Badge */}
+                      <div className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 bg-amber-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+                        <Star className="w-3.5 h-3.5 fill-white" />
+                        Destaque
+                      </div>
+
+                      {/* Image Section */}
+                      <div className="relative aspect-video bg-gradient-to-br from-amber-100 to-yellow-100 overflow-hidden">
+                        {memorial.mainPhoto ? (
+                          <img
+                            src={memorial.mainPhoto}
+                            alt={memorial.fullName}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full bg-gradient-to-br from-amber-100 to-yellow-100">
+                            <div className="text-7xl font-bold text-amber-300/40">
+                              {memorial.fullName.charAt(0).toUpperCase()}
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                      </div>
+
+                      {/* Content Section */}
+                      <CardContent className="p-5 sm:p-6 flex flex-col flex-grow bg-gradient-to-b from-amber-50/30 to-white">
+                        <div className="mb-3">
+                          {memorial.popularName ? (
+                            <>
+                              <h3 className="font-bold text-xl sm:text-2xl text-amber-700 line-clamp-1 group-hover:text-amber-800 transition-colors">
+                                {memorial.popularName}
+                              </h3>
+                              <p className="text-xs sm:text-sm text-gray-600 line-clamp-1 mt-1">
+                                {memorial.fullName}
+                              </p>
+                            </>
+                          ) : (
+                            <h3 className="font-bold text-xl sm:text-2xl text-gray-900 line-clamp-2 group-hover:text-amber-700 transition-colors">
+                              {memorial.fullName}
+                            </h3>
+                          )}
+                        </div>
+
+                        {memorial.birthDate && memorial.deathDate && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-3 pb-3 border-b border-gray-100">
+                            <Calendar className="w-4 h-4 flex-shrink-0 text-amber-600" />
+                            <span className="flex-shrink-0 font-medium">
+                              {formatDate(memorial.birthDate)} — {formatDate(memorial.deathDate)}
+                            </span>
+                          </div>
+                        )}
+
+                        {memorial.birthplace && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                            <MapPin className="w-4 h-4 flex-shrink-0 text-amber-600" />
+                            <span className="line-clamp-1">{memorial.birthplace}</span>
+                          </div>
+                        )}
+
+                        {memorial.biography && (
+                          <p className="text-sm text-gray-600 line-clamp-3 mb-4 leading-relaxed flex-grow">
+                            {memorial.biography}
+                          </p>
+                        )}
+
+                        <Button
+                          className="w-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white font-medium shadow-lg hover:shadow-xl transition-all mt-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/memorial/${memorial.slug}`);
+                          }}
+                        >
+                          Ver Memorial Completo
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Regular Memorials Section */}
+            {regularMemorials.length > 0 && (
+              <section>
+                {featuredMemorials.length > 0 && (
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Todos os Memoriais</h2>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                  {regularMemorials.map((memorial) => (
                 <Card
                   key={memorial.id}
                   className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-gray-200/50 overflow-hidden flex flex-col h-full"
@@ -203,7 +362,9 @@ export default function HistoricMemorialsPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+                </div>
+              </section>
+            )}
           </>
         ) : (
           <div className="text-center py-20">

@@ -20,6 +20,9 @@ export default function HomePage() {
   });
   const [inviteSuccess, setInviteSuccess] = useState(false);
 
+  // Fetch featured historical memorials
+  const { data: featuredMemorials } = api.memorial.getFeaturedHistoricMemorials.useQuery();
+
   const createLeadMutation = api.lead.create.useMutation({
     onSuccess: () => {
       setInviteSuccess(true);
@@ -72,6 +75,13 @@ export default function HomePage() {
             <span className="text-lg sm:text-xl font-bold text-gray-900">{APP_TITLE}</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
+            <Button
+              variant="ghost"
+              className="hidden md:inline-flex text-gray-600 hover:text-teal-700"
+              onClick={() => router.push("/historic-memorials")}
+            >
+              Memoriais Históricos
+            </Button>
             <Button
               variant="ghost"
               className="hidden sm:inline-flex text-gray-600 hover:text-teal-700"
@@ -203,6 +213,111 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Featured Historical Memorials Section */}
+      {featuredMemorials && featuredMemorials.length > 0 && (
+        <section className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-10 sm:mb-12 fade-in">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-full text-amber-700 text-sm font-medium mb-4">
+                <Star className="w-4 h-4 fill-amber-600" />
+                Personalidades Históricas
+              </div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Preservando Legados de Pernambuco
+              </h2>
+              <div className="section-divider mb-6"></div>
+              <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+                Conheça as histórias de figuras que marcaram a história de Pernambuco e do Brasil
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {featuredMemorials.map((memorial, index) => (
+                <div
+                  key={memorial.id}
+                  className={`card-modern p-5 sm:p-6 cursor-pointer hover:shadow-xl transition-all duration-300 fade-in group`}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                  onClick={() => router.push(`/memorial/${memorial.slug}`)}
+                >
+                  {/* Image */}
+                  <div className="relative aspect-square rounded-xl overflow-hidden mb-4 bg-gradient-to-br from-amber-100 to-yellow-100">
+                    {memorial.mainPhoto ? (
+                      <img
+                        src={memorial.mainPhoto}
+                        alt={memorial.fullName}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-6xl font-bold text-amber-300/40">
+                          {memorial.fullName.charAt(0).toUpperCase()}
+                        </div>
+                      </div>
+                    )}
+                    {/* Featured Badge */}
+                    <div className="absolute top-3 right-3 bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                      <Star className="w-3 h-3 fill-white" />
+                      Destaque
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="space-y-3">
+                    {memorial.popularName ? (
+                      <>
+                        <h3 className="font-bold text-lg text-amber-700 group-hover:text-amber-800 transition-colors">
+                          {memorial.popularName}
+                        </h3>
+                        <p className="text-sm text-gray-500">{memorial.fullName}</p>
+                      </>
+                    ) : (
+                      <h3 className="font-bold text-lg text-gray-900 group-hover:text-amber-700 transition-colors">
+                        {memorial.fullName}
+                      </h3>
+                    )}
+
+                    {memorial.category && (
+                      <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-xs font-medium">
+                        {memorial.category}
+                      </div>
+                    )}
+
+                    {memorial.biography && (
+                      <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
+                        {memorial.biography}
+                      </p>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      className="w-full mt-4 border-amber-200 text-amber-700 hover:bg-amber-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/memorial/${memorial.slug}`);
+                      }}
+                    >
+                      Ver História Completa
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA to view all historical memorials */}
+            <div className="text-center mt-10 sm:mt-12">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/historic-memorials")}
+                className="btn-outline inline-flex items-center gap-2"
+              >
+                Ver Todos os Memoriais Históricos
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Pricing Section */}
       <section id="pricing" className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">

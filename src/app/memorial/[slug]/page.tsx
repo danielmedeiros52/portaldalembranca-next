@@ -153,14 +153,29 @@ export default function PublicMemorialPage() {
         {/* Hero Content */}
         <div className="relative z-10 px-4 sm:px-6 pb-24 sm:pb-32 pt-8 sm:pt-12">
           <div className="max-w-5xl mx-auto text-center">
-            <div className="mb-6">
+            <div className="mb-6 relative inline-block">
               <img
                 src={memorial.mainPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(memorial.fullName)}&background=ffffff&color=0F766E&size=160`}
                 alt={memorial.fullName}
                 className="w-28 h-28 sm:w-40 sm:h-40 rounded-full mx-auto object-cover ring-4 ring-white shadow-2xl"
               />
+              {memorial.isHistorical && (
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5 whitespace-nowrap">
+                  <Landmark className="w-3.5 h-3.5" />
+                  Memorial Histórico
+                </div>
+              )}
             </div>
+            {memorial.isHistorical && memorial.popularName && (
+              <p className="text-white/90 text-lg sm:text-xl mb-2">{memorial.popularName}</p>
+            )}
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4">{memorial.fullName}</h1>
+            {memorial.isHistorical && memorial.category && (
+              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-white/90 text-sm mb-4">
+                <Star className="w-4 h-4" />
+                {memorial.category}
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-white/80 mb-4 sm:mb-6 text-sm sm:text-base">
               {memorial.birthDate && memorial.deathDate && (
                 <>
@@ -207,6 +222,17 @@ export default function PublicMemorialPage() {
                   <p className="text-sm text-gray-500">
                     <span className="font-medium">Filiação:</span> {memorial.filiation}
                   </p>
+                </div>
+              )}
+              {memorial.isHistorical && memorial.graveLocation && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Local de Sepultamento</p>
+                      <p className="text-gray-600">{memorial.graveLocation}</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </section>

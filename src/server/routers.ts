@@ -239,6 +239,12 @@ const memorialRouter = router({
       return db.getHistoricMemorials();
     }),
 
+  // Get featured historical memorials (for homepage)
+  getFeaturedHistoricMemorials: publicProcedure
+    .query(async () => {
+      return db.getFeaturedHistoricMemorials();
+    }),
+
   // Debug: Get all historical memorials (any status/visibility)
   debugAllHistorical: publicProcedure
     .query(async () => {

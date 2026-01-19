@@ -191,6 +191,20 @@ export async function getHistoricMemorials(): Promise<Memorial[]> {
     .orderBy(desc(memorials.createdAt));
 }
 
+// Get featured historical memorials (for homepage)
+export async function getFeaturedHistoricMemorials(): Promise<Memorial[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(memorials)
+    .where(and(
+      eq(memorials.visibility, 'public'),
+      eq(memorials.isHistorical, true),
+      eq(memorials.isFeatured, true)
+    ))
+    .orderBy(desc(memorials.createdAt))
+    .limit(3);
+}
+
 // Debug: Get all memorials with historical flag (any status/visibility)
 export async function getAllHistoricalMemorials(): Promise<Memorial[]> {
   const db = await getDb();
