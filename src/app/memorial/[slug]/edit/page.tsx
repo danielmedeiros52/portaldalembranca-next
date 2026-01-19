@@ -121,8 +121,22 @@ export default function MemorialEditPage() {
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (max 5MB for base64)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Imagem muito grande. Tamanho máximo: 5MB");
+        return;
+      }
       setPhotoFile(file);
     }
+  };
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleAddPhoto = async () => {
@@ -133,13 +147,12 @@ export default function MemorialEditPage() {
 
     setUploadingPhoto(true);
     try {
-      // TODO: Implement actual S3 upload
-      // For now, use placeholder URL
-      const photoUrl = URL.createObjectURL(photoFile);
+      // Convert image to base64
+      const base64Image = await convertImageToBase64(photoFile);
 
       await createPhotoMutation.mutateAsync({
         memorialId: memorial.id,
-        fileUrl: photoUrl,
+        fileUrl: base64Image,
         caption: photoCaption || undefined,
       });
 
@@ -147,6 +160,7 @@ export default function MemorialEditPage() {
       setShowAddPhoto(false);
       setPhotoFile(null);
       setPhotoCaption("");
+      refetch();
     } catch (error: any) {
       console.error("Add photo error:", error);
       toast.error(error.message || "Erro ao adicionar foto.");
@@ -490,7 +504,7 @@ export default function MemorialEditPage() {
                           <p className="text-gray-600 mb-2">
                             {photoFile ? photoFile.name : "Arraste uma foto ou clique para selecionar"}
                           </p>
-                          <p className="text-sm text-gray-400">PNG, JPG até 10MB</p>
+                          <p className="text-sm text-gray-400">PNG, JPG até 5MB</p>
                         </div>
                       </label>
                       {photoFile && (

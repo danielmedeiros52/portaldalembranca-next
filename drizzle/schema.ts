@@ -89,8 +89,8 @@ export const memorials = pgTable("memorials", {
   birthplace: varchar("birthplace", { length: 255 }),
   filiation: text("filiation"),
   biography: text("biography"),
-  mainPhoto: varchar("main_photo", { length: 500 }),
-  videoUrl: varchar("video_url", { length: 500 }),
+  mainPhoto: text("main_photo"), // Changed to TEXT to support base64 images
+  videoUrl: text("video_url"), // Changed to TEXT for long URLs
   visibility: visibilityEnum("visibility").default("public").notNull(),
   status: statusEnum("status").default("pending_data").notNull(),
   funeralHomeId: integer("funeral_home_id"),
@@ -126,7 +126,7 @@ export type InsertDescendant = typeof descendants.$inferInsert;
 export const photos = pgTable("photos", {
   id: serial("id").primaryKey(),
   memorialId: integer("memorial_id").notNull(),
-  fileUrl: varchar("file_url", { length: 500 }).notNull(),
+  fileUrl: text("file_url").notNull(), // Changed to TEXT to support base64 images
   caption: text("caption"),
   order: integer("order").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
