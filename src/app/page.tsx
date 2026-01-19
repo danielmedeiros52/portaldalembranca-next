@@ -75,15 +75,25 @@ export default function HomePage() {
             <Button
               variant="ghost"
               className="hidden sm:inline-flex text-gray-600 hover:text-teal-700"
-              onClick={() => router.push("/historic-memorials")}
+              onClick={() => {
+                const pricingSection = document.getElementById("pricing");
+                pricingSection?.scrollIntoView({ behavior: "smooth" });
+              }}
             >
-              Memoriais Históricos
+              Planos
             </Button>
             <Button
               onClick={() => router.push("/login")}
-              className="btn-primary text-sm sm:text-base px-3 sm:px-6 py-2 sm:py-3"
+              variant="ghost"
+              className="text-gray-600 hover:text-teal-700 text-sm sm:text-base"
             >
               Entrar
+            </Button>
+            <Button
+              onClick={() => router.push("/checkout?plan=essencial")}
+              className="btn-primary text-sm sm:text-base px-3 sm:px-6 py-2 sm:py-3"
+            >
+              Começar
             </Button>
           </div>
         </div>
@@ -102,45 +112,48 @@ export default function HomePage() {
             <div className="fade-in">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 rounded-full text-teal-700 text-sm font-medium mb-6">
                 <Sparkles className="w-4 h-4" />
-                Versão piloto em Pernambuco
+                Preservando memórias em Pernambuco
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-4 sm:mb-6">
-                Preserve memórias com{" "}
-                <span className="text-gradient">tecnologia</span> e sensibilidade
+                Eternize memórias com{" "}
+                <span className="text-gradient">dignidade</span> e carinho
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed mb-6 sm:mb-8">
-                Crie memoriais digitais para preservar as histórias de quem você ama. Uma solução sensível e duradoura, desenvolvida em Pernambuco para as famílias e funerárias locais.
+                Crie um memorial digital duradouro com fotos, história e homenagens. Acesso via QR Code permanente para familiares e amigos visitarem a qualquer momento.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button
-                  onClick={() => router.push("/login")}
+                  onClick={() => router.push("/checkout?plan=essencial")}
                   className="btn-primary inline-flex items-center gap-2"
                 >
-                  Criar Memorial
+                  Começar Agora
                   <ArrowRight className="w-4 h-4" />
                 </Button>
                 <Button
-                  onClick={() => router.push("/historic-memorials")}
+                  onClick={() => {
+                    const pricingSection = document.getElementById("pricing");
+                    pricingSection?.scrollIntoView({ behavior: "smooth" });
+                  }}
                   variant="outline"
                   className="btn-outline"
                 >
-                  Memoriais Históricos
+                  Ver Planos
                 </Button>
               </div>
 
               {/* Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-100">
                 <div>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">15 min</p>
-                  <p className="text-xs sm:text-sm text-gray-500">Tempo médio para ativar um memorial</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">Ilimitado</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Compartilhamento com familiares e amigos</p>
                 </div>
                 <div>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">4 parceiros</p>
-                  <p className="text-xs sm:text-sm text-gray-500">Funerárias e cemitérios em Recife/RMR</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">QR Code</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Acesso permanente via celular</p>
                 </div>
                 <div>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">Placa + QR</p>
-                  <p className="text-xs sm:text-sm text-gray-500">Entrega pronta para ser fixada no túmulo</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">Seguro</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Dados protegidos e sempre disponíveis</p>
                 </div>
               </div>
             </div>
@@ -192,13 +205,13 @@ export default function HomePage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
+      <section id="pricing" className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10 sm:mb-16 fade-in">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Nossos Planos</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Plano Simples e Acessível</h2>
             <div className="section-divider mb-6"></div>
             <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-              Escolha o plano ideal para preservar as memórias de quem você ama
+              Memorial completo por apenas R$ 19,90 por ano. Sem complicação, sem custos escondidos.
             </p>
           </div>
 
@@ -223,28 +236,34 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-start gap-2 text-sm text-gray-600">
                   <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Até 10 fotos
+                  Galeria com até 10 fotos
                 </li>
                 <li className="flex items-start gap-2 text-sm text-gray-600">
                   <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Biografia completa
+                  Biografia e história completa
                 </li>
                 <li className="flex items-start gap-2 text-sm text-gray-600">
                   <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  QR Code digital
+                  QR Code para acesso digital
                 </li>
                 <li className="flex items-start gap-2 text-sm text-gray-600">
                   <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
                   Compartilhamento ilimitado
                 </li>
+                <li className="flex items-start gap-2 text-sm text-gray-600">
+                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
+                  Dedicações e homenagens
+                </li>
               </ul>
               <Button
-                onClick={() => router.push("/login?plan=essencial")}
-                variant="outline"
-                className="w-full btn-outline"
+                onClick={() => router.push("/checkout?plan=essencial")}
+                className="w-full btn-primary"
               >
-                Criar Memorial
+                Começar Agora
               </Button>
+              <p className="text-xs text-center text-gray-500 mt-4">
+                Pagamento seguro via PIX ou cartão de crédito
+              </p>
             </div>
           </div>
         </div>
@@ -254,126 +273,101 @@ export default function HomePage() {
       <section className="py-12 sm:py-20 px-4 sm:px-6 gradient-subtle">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10 sm:mb-16 fade-in">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Como Funciona</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simples em 3 Passos</h2>
             <div className="section-divider mb-6"></div>
             <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-              Uma solução completa para funerárias e famílias criarem memoriais digitais significativos
+              Criar um memorial é rápido e fácil. Comece agora mesmo.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
-            {/* Feature 1 */}
-            <div className="card-modern p-5 sm:p-8 fade-in stagger-1">
-              <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-6">
-                <QrCode className="w-7 h-7 text-white" />
+          <div className="grid sm:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
+            {/* Step 1 */}
+            <div className="card-modern p-6 fade-in stagger-1 text-center">
+              <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-white">1</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Para Funerárias</h3>
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-teal-600"></div>
-                  </div>
-                  Ative um memorial junto com o contrato do funeral
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-teal-600"></div>
-                  </div>
-                  Gere código QR e acompanhe a produção da placa
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-teal-600"></div>
-                  </div>
-                  Painel com comissões e status dos memoriais
-                </li>
-              </ul>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Escolha o Plano</h3>
+              <p className="text-gray-600">
+                Selecione o plano Memorial Essencial por R$ 19,90/ano e inicie o processo
+              </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="card-modern p-5 sm:p-8 fade-in stagger-2">
-              <div className="w-14 h-14 rounded-2xl gradient-secondary flex items-center justify-center mb-6">
-                <Users className="w-7 h-7 text-white" />
+            {/* Step 2 */}
+            <div className="card-modern p-6 fade-in stagger-2 text-center">
+              <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-white">2</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Para Famílias</h3>
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-rose-600"></div>
-                  </div>
-                  Preencha biografia, fotos e homenagens com segurança
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-rose-600"></div>
-                  </div>
-                  Registre descendentes e mantenha a árvore da família
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-rose-600"></div>
-                  </div>
-                  Compartilhe o link ou QR para toda a rede de afetos
-                </li>
-              </ul>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Preencha os Dados</h3>
+              <p className="text-gray-600">
+                Adicione fotos, biografia, datas importantes e homenagens especiais
+              </p>
             </div>
+
+            {/* Step 3 */}
+            <div className="card-modern p-6 fade-in stagger-3 text-center">
+              <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-white">3</span>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Compartilhe</h3>
+              <p className="text-gray-600">
+                Receba seu QR Code e link para compartilhar com familiares e amigos
+              </p>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center mt-12">
+            <Button
+              onClick={() => router.push("/checkout?plan=essencial")}
+              className="btn-primary inline-flex items-center gap-2 px-8 py-4"
+            >
+              Criar Meu Memorial Agora
+              <ArrowRight className="w-5 h-5" />
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Benefits Section */}
       <section className="py-12 sm:py-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Depoimentos</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Por Que Escolher o Portal da Lembrança?</h2>
             <div className="section-divider"></div>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
-            {/* Testimonial 1 */}
-            <div className="card-modern p-6 fade-in stagger-1">
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
-                ))}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
+            {/* Benefit 1 */}
+            <div className="card-modern p-6 fade-in stagger-1 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-teal-100 flex items-center justify-center mx-auto mb-4">
+                <Heart className="w-7 h-7 text-teal-600" />
               </div>
-              <p className="text-gray-600 mb-6">
-                "Conseguimos organizar fotos, biografia e descendentes da minha avó em poucas horas. A placa com QR Code já está no túmulo e a família inteira consegue acessar sem complicação."
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Preservação Digital</h3>
+              <p className="text-gray-600">
+                Suas memórias protegidas e acessíveis para sempre, sem risco de perda ou deterioração
               </p>
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=48&h=48&fit=crop&crop=face"
-                  alt="Ana Paula"
-                  className="w-12 h-12 avatar"
-                />
-                <div>
-                  <p className="font-medium text-gray-900">Ana Paula Silva</p>
-                  <p className="text-sm text-gray-500">Família</p>
-                </div>
-              </div>
             </div>
 
-            {/* Testimonial 2 */}
-            <div className="card-modern p-6 fade-in stagger-2">
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
-                ))}
+            {/* Benefit 2 */}
+            <div className="card-modern p-6 fade-in stagger-2 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-7 h-7 text-rose-600" />
               </div>
-              <p className="text-gray-600 mb-6">
-                "Apresentamos o memorial durante a contratação e a família costuma aceitar na hora. O painel com status e comissões ajuda nossa equipe a acompanhar cada caso."
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Acesso Familiar</h3>
+              <p className="text-gray-600">
+                Toda a família pode acessar e contribuir com fotos e homenagens de qualquer lugar
               </p>
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=48&h=48&fit=crop&crop=face"
-                  alt="Roberto"
-                  className="w-12 h-12 avatar"
-                />
-                <div>
-                  <p className="font-medium text-gray-900">Roberto Mendes</p>
-                  <p className="text-sm text-gray-500">Funerária Paz Eterna</p>
-                </div>
+            </div>
+
+            {/* Benefit 3 */}
+            <div className="card-modern p-6 fade-in stagger-3 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-cyan-100 flex items-center justify-center mx-auto mb-4">
+                <QrCode className="w-7 h-7 text-cyan-600" />
               </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">QR Code Prático</h3>
+              <p className="text-gray-600">
+                Acesse o memorial instantaneamente com o celular através do QR Code
+              </p>
             </div>
           </div>
         </div>
@@ -388,25 +382,22 @@ export default function HomePage() {
             <div className="absolute bottom-0 right-0 w-60 h-60 bg-white/10 rounded-full translate-x-1/3 translate-y-1/3"></div>
 
             <div className="relative z-10">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">Conheça o Portal da Lembrança</h2>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">Comece Seu Memorial Hoje</h2>
               <p className="text-base sm:text-lg md:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto">
-                Conecte sua funerária ou família ao Portal da Lembrança em Pernambuco e valide a experiência com QR Codes, placas físicas e suporte dedicado.
+                Preserve as memórias de quem você ama com dignidade e carinho. Processo simples e rápido.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <Button
-                  onClick={() => setShowInviteModal(true)}
-                  className="bg-white text-teal-700 font-semibold px-4 sm:px-8 py-3 sm:py-4 rounded-xl hover:bg-gray-100 transition-all duration-300 shadow-lg text-sm sm:text-base"
+                  onClick={() => router.push("/checkout?plan=essencial")}
+                  className="bg-white text-teal-700 font-semibold px-6 sm:px-10 py-3 sm:py-4 rounded-xl hover:bg-gray-100 transition-all duration-300 shadow-lg text-sm sm:text-base inline-flex items-center gap-2"
                 >
-                  Solicite um convite
-                </Button>
-                <Button
-                  onClick={() => router.push("/memorial/maria-silva-santos")}
-                  variant="outline"
-                  className="border-2 border-white text-white font-semibold px-4 sm:px-8 py-3 sm:py-4 rounded-xl hover:bg-white/10 transition-all duration-300 text-sm sm:text-base"
-                >
-                  Ver Demonstração
+                  Criar Memorial Agora
+                  <ArrowRight className="w-5 h-5" />
                 </Button>
               </div>
+              <p className="text-white/80 text-sm mt-6">
+                Apenas R$ 19,90/ano • Pagamento seguro • Cancele quando quiser
+              </p>
             </div>
           </div>
         </div>
