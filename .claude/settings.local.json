@@ -16,7 +16,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd payment tracking and subscription management system\n\n- Add subscriptions and payment_transactions tables to database schema\n- Implement payment transaction tracking \\(create, update, retrieve\\)\n- Add subscription management functions \\(create, retrieve, cancel\\)\n- Integrate automatic payment recording in createPaymentIntent\n- Add tRPC procedures for subscription management \\(createSubscription, getMySubscriptions, cancelSubscription, getPaymentTransaction\\)\n- Update checkout flow to create subscriptions after successful payment\n- Add comprehensive test suite for payment tracking and subscriptions\n- Support all user types: funeral_home, family_user, oauth_user\n- Track payment status, methods \\(card/pix/boleto\\), and failure reasons\n- Store Stripe customer and subscription IDs for integration\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
       "Bash(ls:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(git push:*)"
     ]
   }
 }

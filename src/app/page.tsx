@@ -319,66 +319,116 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Pricing Section */}
+      {/* Pricing Section - Redesigned for single plan */}
       <section id="pricing" className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10 sm:mb-16 fade-in">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Plano Simples e Acessível</h2>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8 sm:mb-12 fade-in">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simples e Transparente</h2>
             <div className="section-divider mb-6"></div>
-            <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-              Memorial completo por apenas R$ 19,90 por ano. Sem complicação, sem custos escondidos.
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+              Um único plano com tudo que você precisa para preservar memórias
             </p>
           </div>
 
-          <div className="flex justify-center max-w-5xl mx-auto">
-            {/* Plan 1 - Essencial */}
-            <div className="card-modern p-6 fade-in stagger-1 max-w-md w-full">
-              <div className="text-center mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-teal-100 flex items-center justify-center mx-auto mb-4">
-                  <Heart className="w-7 h-7 text-teal-600" />
+          {/* Single Plan - Enhanced Design */}
+          <div className="relative fade-in">
+            {/* Popular Badge */}
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+              <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
+                Mais Escolhido
+              </div>
+            </div>
+
+            <div className="card-modern p-8 sm:p-10 border-2 border-teal-100">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                {/* Left Side - Plan Info */}
+                <div className="text-center md:text-left">
+                  <div className="inline-flex w-16 h-16 rounded-2xl gradient-primary items-center justify-center mb-6">
+                    <Heart className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Memorial Essencial</h3>
+                  <p className="text-gray-600 mb-6">
+                    Tudo que você precisa para criar um memorial digital completo e duradouro
+                  </p>
+                  <div className="flex items-baseline justify-center md:justify-start gap-2 mb-6">
+                    <span className="text-4xl sm:text-5xl font-bold text-gray-900">R$ 19,90</span>
+                    <div className="text-left">
+                      <span className="text-gray-500 text-base block">/ano</span>
+                      <span className="text-teal-600 text-xs font-medium">menos de R$ 2 por mês</span>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => router.push("/checkout?plan=essencial")}
+                    className="w-full md:w-auto btn-primary px-8 py-4 text-lg mb-4"
+                  >
+                    Começar Agora
+                  </Button>
+                  <p className="text-sm text-gray-500">
+                    Pagamento seguro via PIX ou cartão
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Memorial Essencial</h3>
-                <p className="text-sm text-gray-500 mb-4">Ideal para preservar memórias de forma simples e acessível</p>
-                <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-3xl font-bold text-gray-900">R$ 19,90</span>
-                  <span className="text-gray-500 text-sm">/ano</span>
+
+                {/* Right Side - Features */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4 text-center md:text-left">Recursos Inclusos:</h4>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3 text-sm text-gray-600">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600" />
+                      </div>
+                      <span>Página memorial personalizada com URL própria</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-gray-600">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600" />
+                      </div>
+                      <span>Galeria com até 10 fotos em alta qualidade</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-gray-600">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600" />
+                      </div>
+                      <span>Biografia completa e linha do tempo</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-gray-600">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600" />
+                      </div>
+                      <span>QR Code para acesso rápido via celular</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-gray-600">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600" />
+                      </div>
+                      <span>Compartilhamento ilimitado com familiares</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-gray-600">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600" />
+                      </div>
+                      <span>Espaço para dedicações e homenagens públicas</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Página memorial personalizada
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Galeria com até 10 fotos
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Biografia e história completa
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  QR Code para acesso digital
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Compartilhamento ilimitado
-                </li>
-                <li className="flex items-start gap-2 text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                  Dedicações e homenagens
-                </li>
-              </ul>
-              <Button
-                onClick={() => router.push("/checkout?plan=essencial")}
-                className="w-full btn-primary"
-              >
-                Começar Agora
-              </Button>
-              <p className="text-xs text-center text-gray-500 mt-4">
-                Pagamento seguro via PIX ou cartão de crédito
-              </p>
+
+              {/* Bottom Benefits */}
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Sem taxas extras</p>
+                    <p className="text-xs text-gray-500 mt-1">Preço fixo anual</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Cancele quando quiser</p>
+                    <p className="text-xs text-gray-500 mt-1">Sem multas ou burocracia</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Suporte dedicado</p>
+                    <p className="text-xs text-gray-500 mt-1">Estamos aqui para ajudar</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
