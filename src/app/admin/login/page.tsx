@@ -56,7 +56,7 @@ export default function AdminLoginPage() {
       }
 
       toast.success("Login realizado com sucesso!");
-      router.push("/admin");
+      router.push("/admin/dashboard");
     } catch (error: any) {
       console.error("Admin login error:", error);
       toast.error(error.message || "E-mail ou senha inválidos");

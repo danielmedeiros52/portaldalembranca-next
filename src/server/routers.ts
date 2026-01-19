@@ -13,10 +13,14 @@ import crypto from "crypto";
 import { generateMemorialQRCode, generateMemorialQRCodeSVG } from "~/server/qrcode";
 import { sdk } from "~/server/_core/sdk";
 import { cookies } from "next/headers";
+import { initializeDefaultAdmin } from "~/lib/init-admin";
 
 const FUNERAL_HOME_PREFIX = "funeral" as const;
 const FAMILY_USER_PREFIX = "family" as const;
 const ADMIN_USER_PREFIX = "admin" as const;
+
+// Initialize default admin on server startup
+initializeDefaultAdmin().catch(console.error);
 
 async function persistUserSession(
   ctx: any,
@@ -649,6 +653,21 @@ const adminRouter = router({
       return db.getAllFamilyUsers();
     }),
 
+  // Check if any active admin users exist (public for setup page)
+  hasActiveAdmins: publicProcedure
+    .query(async () => {
+      const dbInstance = await getDb();
+      if (!dbInstance) return false;
+
+      const activeAdmins = await dbInstance
+        .select()
+        .from(adminUsers)
+        .where(eq(adminUsers.isActive, true))
+        .limit(1);
+
+      return activeAdmins.length > 0;
+    }),
+
   // Get all leads
   getAllLeads: protectedProcedure
     .query(async () => {
@@ -776,6 +795,125 @@ const adminRouter = router({
     .input(z.object({ orderId: z.number() }))
     .query(async ({ input }) => {
       return db.getOrderHistory(input.orderId);
+    }),
+
+  // ============================================
+  // HISTORICAL MEMORIALS MANAGEMENT
+  // ============================================
+
+  // Get all historical memorials
+  getAllHistoricalMemorials: protectedProcedure
+    .query(async () => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      return await dbInstance
+        .select()
+        .from(memorials)
+        .where(eq(memorials.isHistorical, true))
+        .orderBy(memorials.fullName);
+    }),
+
+  // Toggle historical status
+  toggleHistoricalStatus: protectedProcedure
+    .input(z.object({
+      memorialId: z.number(),
+      isHistorical: z.boolean(),
+    }))
+    .mutation(async ({ input }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      await dbInstance
+        .update(memorials)
+        .set({ isHistorical: input.isHistorical, updatedAt: new Date() })
+        .where(eq(memorials.id, input.memorialId));
+
+      return { success: true };
+    }),
+
+  // Toggle featured status
+  toggleFeaturedStatus: protectedProcedure
+    .input(z.object({
+      memorialId: z.number(),
+      isFeatured: z.boolean(),
+    }))
+    .mutation(async ({ input }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      await dbInstance
+        .update(memorials)
+        .set({ isFeatured: input.isFeatured, updatedAt: new Date() })
+        .where(eq(memorials.id, input.memorialId));
+
+      return { success: true };
+    }),
+
+  // Bulk import historical memorials
+  bulkImportMemorials: protectedProcedure
+    .input(z.array(z.object({
+      slug: z.string(),
+      fullName: z.string(),
+      popularName: z.string().optional(),
+      birthDate: z.string().optional(),
+      deathDate: z.string().optional(),
+      birthplace: z.string().optional(),
+      filiation: z.string().optional(),
+      biography: z.string().optional(),
+      mainPhoto: z.string().optional(),
+      category: z.string().optional(),
+      graveLocation: z.string().optional(),
+      isHistorical: z.boolean().default(true),
+      isFeatured: z.boolean().default(false),
+      visibility: z.enum(["public", "private"]).default("public"),
+      status: z.enum(["active", "pending_data", "inactive"]).default("active"),
+    })))
+    .mutation(async ({ input }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      const results = [];
+      for (const memorial of input) {
+        try {
+          // Check if slug already exists
+          const existing = await dbInstance
+            .select()
+            .from(memorials)
+            .where(eq(memorials.slug, memorial.slug))
+            .limit(1);
+
+          if (existing.length > 0) {
+            // Update existing memorial
+            await dbInstance
+              .update(memorials)
+              .set({
+                ...memorial,
+                updatedAt: new Date(),
+              })
+              .where(eq(memorials.slug, memorial.slug));
+
+            results.push({ slug: memorial.slug, status: "updated" });
+          } else {
+            // Insert new memorial
+            await dbInstance.insert(memorials).values({
+              ...memorial,
+              funeralHomeId: null,
+              familyUserId: null,
+            });
+
+            results.push({ slug: memorial.slug, status: "created" });
+          }
+        } catch (error) {
+          results.push({
+            slug: memorial.slug,
+            status: "error",
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
+      return { success: true, results };
     }),
 });
 

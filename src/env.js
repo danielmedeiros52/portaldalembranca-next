@@ -15,6 +15,9 @@ export const env = createEnv({
     OAUTH_SERVER_URL: z.string().url().optional(),
     OWNER_OPEN_ID: z.string().optional(),
     STRIPE_SECRET_KEY: z.string().optional(),
+    DEFAULT_ADMIN_EMAIL: z.string().email().optional(),
+    DEFAULT_ADMIN_PASSWORD: z.string().min(6).optional(),
+    DEFAULT_ADMIN_NAME: z.string().optional(),
   },
 
   /**
@@ -41,6 +44,9 @@ export const env = createEnv({
     OAUTH_SERVER_URL: process.env.OAUTH_SERVER_URL,
     OWNER_OPEN_ID: process.env.OWNER_OPEN_ID,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    DEFAULT_ADMIN_EMAIL: process.env.DEFAULT_ADMIN_EMAIL,
+    DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD,
+    DEFAULT_ADMIN_NAME: process.env.DEFAULT_ADMIN_NAME,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_APP_TITLE: process.env.NEXT_PUBLIC_APP_TITLE,
     NEXT_PUBLIC_APP_ID: process.env.NEXT_PUBLIC_APP_ID,
