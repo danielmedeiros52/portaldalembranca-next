@@ -39,14 +39,26 @@ async function persistUserSession(
     expiresInMs: ONE_YEAR_MS,
   });
 
-  // Set session cookie using Next.js cookies() API
-  const cookieStore = await cookies();
+  console.log("🍪 Setting cookie:", COOKIE_NAME, "for openId:", payload.openId);
+
+  // Add cookie to store so route handler can set it in response
+  const { addCookie } = await import('~/server/_core/cookie-store');
   const cookieOptions = getSessionCookieOptions();
 
-  cookieStore.set(COOKIE_NAME, token, {
-    ...cookieOptions,
-    maxAge: ONE_YEAR_MS / 1000, // Convert milliseconds to seconds for maxAge
+  // Get requestId from context (passed from route handler)
+  const requestId = (ctx as any).requestId;
+  console.log("📝 Using requestId from context:", requestId);
+
+  addCookie(requestId, {
+    name: COOKIE_NAME,
+    value: token,
+    options: {
+      ...cookieOptions,
+      maxAge: ONE_YEAR_MS / 1000, // Convert milliseconds to seconds
+    },
   });
+
+  console.log("✅ Cookie added to store");
 }
 
 function buildAccountOpenId(prefix: string, id: number) {
@@ -609,14 +621,30 @@ const adminRouter = router({
         email: admin.email,
       });
 
-      await persistUserSession(ctx, {
+      // Create session token
+      const token = await sdk.createSessionToken(adminOpenId, {
+        name: admin.name,
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      // Upsert admin user in users table
+      await db.upsertUser({
         openId: adminOpenId,
         name: admin.name,
         email: admin.email,
         loginMethod: "admin",
+        lastSignedIn: new Date(),
       });
 
-      return { id: admin.id, name: admin.name, email: admin.email, type: "admin" };
+      console.log("✅ Admin session token created");
+
+      return {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        type: "admin",
+        token, // Return token to client
+      };
     }),
 
   // Create Admin User (for initial setup)

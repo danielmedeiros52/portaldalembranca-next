@@ -41,12 +41,13 @@ export default function AdminLoginPage() {
         password: formData.password,
       });
 
-      // Store admin session
+      // Store admin session with token
       const adminData = {
         id: result.id,
         name: result.name,
         email: result.email,
         type: result.type,
+        token: result.token, // Session token from backend
         isDemo: false,
         loginTime: new Date().toISOString(),
       };

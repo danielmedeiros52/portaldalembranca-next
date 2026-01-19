@@ -60,6 +60,37 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
           headers: () => {
             const headers = new Headers();
             headers.set("x-trpc-source", "nextjs-react");
+
+            // Add token from localStorage if available
+            if (typeof window !== "undefined") {
+              // Check admin session first
+              const adminSession = localStorage.getItem("adminSession");
+              if (adminSession) {
+                try {
+                  const session = JSON.parse(adminSession);
+                  if (session.token) {
+                    headers.set("Authorization", `Bearer ${session.token}`);
+                    return headers;
+                  }
+                } catch (e) {
+                  // Ignore invalid JSON
+                }
+              }
+
+              // Check regular user session
+              const userSession = localStorage.getItem("userSession");
+              if (userSession) {
+                try {
+                  const session = JSON.parse(userSession);
+                  if (session.token) {
+                    headers.set("Authorization", `Bearer ${session.token}`);
+                  }
+                } catch (e) {
+                  // Ignore invalid JSON
+                }
+              }
+            }
+
             return headers;
           },
         }),

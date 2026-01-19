@@ -60,6 +60,7 @@ export async function loginFuneralHome(email: string, password: string) {
         email: funeralHome.email,
         type: "funeral_home" as const,
       },
+      token, // Return token for Authorization header
     };
   } catch (error: any) {
     console.error("Login error:", error);
@@ -113,6 +114,7 @@ export async function loginFamilyUser(email: string, password: string) {
         email: familyUser.email,
         type: "family_user" as const,
       },
+      token, // Return token for Authorization header
     };
   } catch (error: any) {
     console.error("Login error:", error);
@@ -123,6 +125,10 @@ export async function loginFamilyUser(email: string, password: string) {
 export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
+
+  // Note: localStorage.removeItem("userSession") must be called on client-side
+  // This server action only clears the cookie
+
   return { success: true };
 }
 
@@ -195,6 +201,7 @@ export async function registerFuneralHome(data: {
         email: newUser.email,
         type: "funeral_home" as const,
       },
+      token, // Return token for Authorization header
     };
   } catch (error: any) {
     console.error("Register error:", error);
@@ -270,6 +277,7 @@ export async function registerFamilyUser(data: {
         email: newUser.email,
         type: "family_user" as const,
       },
+      token, // Return token for Authorization header
     };
   } catch (error: any) {
     console.error("Register error:", error);

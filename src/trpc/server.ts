@@ -18,6 +18,7 @@ const createTRPCContext = cache(async () => {
 
   return createContext({
     headers: heads,
+    requestId: "rsc", // RSC doesn't need cookie tracking
   });
 });
 

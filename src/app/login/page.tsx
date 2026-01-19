@@ -59,6 +59,22 @@ function LoginPageContent() {
         return;
       }
 
+      // Store session with token in localStorage
+      if (result.user && result.token) {
+        const sessionData = {
+          id: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
+          type: result.user.type,
+          token: result.token,
+          loginTime: new Date().toISOString(),
+        };
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("userSession", JSON.stringify(sessionData));
+        }
+      }
+
       toast.success("Login realizado com sucesso!");
 
       // Redirect after successful login

@@ -128,8 +128,24 @@ function RegisterPageContent() {
           return;
         }
 
+        // Store session with token in localStorage
+        if (result.user && result.token) {
+          const sessionData = {
+            id: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
+            type: result.user.type,
+            token: result.token,
+            loginTime: new Date().toISOString(),
+          };
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem("userSession", JSON.stringify(sessionData));
+          }
+        }
+
         toast.success("Cadastro realizado com sucesso!");
-        router.push("/login");
+        router.push("/dashboard");
       } else {
         result = await registerFamilyUser({
           name: formData.name,
@@ -141,6 +157,22 @@ function RegisterPageContent() {
         if (!result.success) {
           toast.error(result.error || "Erro ao criar conta");
           return;
+        }
+
+        // Store session with token in localStorage
+        if (result.user && result.token) {
+          const sessionData = {
+            id: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
+            type: result.user.type,
+            token: result.token,
+            loginTime: new Date().toISOString(),
+          };
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem("userSession", JSON.stringify(sessionData));
+          }
         }
 
         toast.success("Cadastro realizado com sucesso!");

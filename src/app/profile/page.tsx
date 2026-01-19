@@ -114,10 +114,20 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = () => {
-    // TODO: Implement logout
-    toast.success("Logout realizado com sucesso!");
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      const { logout } = await import("~/app/actions/auth");
+      await logout();
+      // Clear localStorage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("userSession");
+        localStorage.removeItem("adminSession");
+      }
+      toast.success("Logout realizado com sucesso!");
+      router.push("/login");
+    } catch (error) {
+      toast.error("Erro ao fazer logout");
+    }
   };
 
   return (

@@ -18,7 +18,10 @@
       "Bash(ls:*)",
       "Bash(npx tsx:*)",
       "Bash(git push:*)",
-      "Bash(del \"src\\\\lib\\\\workos.ts\")"
+      "Bash(del \"src\\\\lib\\\\workos.ts\")",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 23256 -Force\")"
     ]
   }
 }

@@ -66,6 +66,11 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       await logout();
+      // Clear localStorage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("userSession");
+        localStorage.removeItem("adminSession");
+      }
       toast.success("Logout realizado com sucesso!");
       router.push("/login");
     } catch (error) {
