@@ -216,10 +216,7 @@ function CheckoutContent() {
       toast.success("Intenção de pagamento criada", { id: toastId });
 
       // Step 3: Create payment method using Stripe.js (client-side, secure)
-      toast.loading("Validando informações do cartão...");
-
-      // Now change step to processing since we have the card element reference
-      setStep("processing");
+      const validatingToast = toast.loading("Validando informações do cartão...");
 
       const { error: pmError, paymentMethod: stripePaymentMethod } = await stripe.createPaymentMethod({
         type: "card",
@@ -231,33 +228,45 @@ function CheckoutContent() {
       });
 
       if (pmError) {
-        toast.error(pmError.message || "Erro ao validar cartão");
-        setStep("payment");
+        console.error("[Checkout] Payment method creation error:", pmError);
+        toast.error(pmError.message || "Erro ao validar cartão", { id: validatingToast });
         setIsLoading(false);
         return;
       }
 
       if (!stripePaymentMethod) {
-        toast.error("Falha ao criar método de pagamento");
-        setStep("payment");
+        console.error("[Checkout] Payment method is null");
+        toast.error("Falha ao criar método de pagamento", { id: validatingToast });
         setIsLoading(false);
         return;
       }
 
+      toast.success("Cartão validado!", { id: validatingToast });
+
+      // Now change step to processing since we have the payment method
+      setStep("processing");
+
       // Step 4: Confirm payment with payment method ID (secure - no card data sent to backend)
-      toast.loading("Processando pagamento...");
+      const processingToast = toast.loading("Processando pagamento...");
+
+      console.log("[Checkout] Confirming payment with:", {
+        paymentIntentId: paymentResult.id,
+        paymentMethodId: stripePaymentMethod.id,
+      });
 
       const confirmResult = await confirmPaymentMutation.mutateAsync({
         paymentIntentId: paymentResult.id,
         paymentMethodId: stripePaymentMethod.id,
       });
 
+      console.log("[Checkout] Payment confirmation result:", confirmResult);
+
       if (confirmResult.status === "succeeded") {
-        toast.success("Pagamento processado com sucesso!");
+        toast.success("Pagamento processado com sucesso!", { id: processingToast });
 
         // Step 5: Create subscription record after successful payment
         try {
-          toast.loading("Criando sua assinatura...");
+          const subToast = toast.loading("Criando sua assinatura...");
 
           await createSubscriptionMutation.mutateAsync({
             planId: selectedPlanId,
@@ -265,9 +274,9 @@ function CheckoutContent() {
             // Optional: stripeCustomerId and stripeSubscriptionId can be added if using Stripe subscriptions
           });
 
-          toast.success("Assinatura criada com sucesso!");
+          toast.success("Assinatura criada com sucesso!", { id: subToast });
         } catch (subError: any) {
-          console.error("Subscription creation error:", subError);
+          console.error("[Checkout] Subscription creation error:", subError);
           // Don't fail the entire flow if subscription creation fails
           // The payment was successful, so we still show success
           toast.error("Aviso: Pagamento confirmado, mas houve erro ao criar assinatura. Entre em contato com o suporte.");
@@ -276,16 +285,18 @@ function CheckoutContent() {
         setStep("success");
       } else if (confirmResult.status === "requires_action") {
         // Payment requires additional action (e.g., 3D Secure)
-        toast.error("Seu pagamento requer autenticação. Por favor, complete a verificação.");
+        console.error("[Checkout] Payment requires action:", confirmResult.status);
+        toast.error("Seu pagamento requer autenticação. Por favor, complete a verificação.", { id: processingToast });
         setStep("payment");
       } else {
-        toast.error(`Pagamento pendente: ${confirmResult.status}`);
+        console.error("[Checkout] Payment status:", confirmResult.status);
+        toast.error(`Pagamento pendente: ${confirmResult.status}`, { id: processingToast });
         setStep("payment");
       }
     } catch (error: any) {
       const errorMessage = error?.message || "Erro ao processar pagamento";
-      console.error("Payment error:", error);
-      toast.error(errorMessage);
+      console.error("[Checkout] Payment error:", error);
+      toast.error(`Erro no pagamento: ${errorMessage}`);
       setStep("payment");
     } finally {
       setIsLoading(false);

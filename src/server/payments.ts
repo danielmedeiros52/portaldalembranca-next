@@ -146,17 +146,26 @@ export async function confirmPaymentWithPaymentMethod(
     throw new Error("Invalid payment method ID. Must be created using Stripe.js");
   }
 
-  // Confirm the payment intent with the payment method
-  const intent = await stripe.paymentIntents.confirm(paymentIntentId, {
-    payment_method: paymentMethodId,
-  });
+  console.log("[Payment] Confirming payment intent:", paymentIntentId, "with method:", paymentMethodId);
 
-  return {
-    id: intent.id,
-    status: intent.status,
-    amount: intent.amount,
-    currency: intent.currency,
-  };
+  try {
+    // Confirm the payment intent with the payment method
+    const intent = await stripe.paymentIntents.confirm(paymentIntentId, {
+      payment_method: paymentMethodId,
+    });
+
+    console.log("[Payment] Payment confirmed successfully:", intent.id, "status:", intent.status);
+
+    return {
+      id: intent.id,
+      status: intent.status,
+      amount: intent.amount,
+      currency: intent.currency,
+    };
+  } catch (error: any) {
+    console.error("[Payment] Error confirming payment:", error);
+    throw new Error(`Payment confirmation failed: ${error.message}`);
+  }
 }
 
 /**
