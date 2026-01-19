@@ -88,7 +88,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 }`}
               >
                 <LayoutDashboard className="w-5 h-5" />
-                Dashboard
+                Início
               </button>
 
               <button
@@ -100,7 +100,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 }`}
               >
                 <Landmark className="w-5 h-5" />
-                Memoriais Históricos
+                Históricos
               </button>
 
               <button
@@ -112,7 +112,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 }`}
               >
                 <FileText className="w-5 h-5" />
-                Todos Memoriais
+                Memoriais
               </button>
 
               <button
@@ -124,7 +124,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 }`}
               >
                 <Users className="w-5 h-5" />
-                Leads
+                Contatos
               </button>
 
               <button
@@ -136,7 +136,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 }`}
               >
                 <Building2 className="w-5 h-5" />
-                Funerárias
+                Parceiros
               </button>
 
               <button
@@ -148,7 +148,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 }`}
               >
                 <ClipboardList className="w-5 h-5" />
-                Pedidos
+                Produção
               </button>
 
               <button
@@ -160,7 +160,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 }`}
               >
                 <Settings className="w-5 h-5" />
-                Configurações
+                Ajustes
               </button>
             </nav>
           </div>

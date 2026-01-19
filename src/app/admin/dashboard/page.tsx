@@ -19,20 +19,38 @@ import {
 export default function AdminDashboardPage() {
   const router = useRouter();
 
-  // Fetch real data
-  const { data: memorials, isLoading: loadingMemorials } = api.memorial.list.useQuery();
-  const { data: leads, isLoading: loadingLeads } = api.lead.getAll.useQuery();
+  // Fetch real data with optimized cache settings to avoid reloads
+  const { data: memorials, isLoading: loadingMemorials } = api.memorial.list.useQuery(undefined, {
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: leads, isLoading: loadingLeads } = api.lead.getAll.useQuery(undefined, {
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
 
   const isLoading = loadingMemorials || loadingLeads;
 
-  // Calculate stats
+  // Calculate real-time stats showing current situation
   const stats = {
     totalMemorials: memorials?.length || 0,
     activeMemorials: memorials?.filter(m => m.status === "active").length || 0,
     pendingMemorials: memorials?.filter(m => m.status === "pending_data").length || 0,
     historicalMemorials: memorials?.filter(m => m.isHistorical).length || 0,
+    featuredMemorials: memorials?.filter(m => m.isFeatured).length || 0,
     totalLeads: leads?.length || 0,
     pendingLeads: leads?.filter(l => l.status === "pending").length || 0,
+    recentMemorials: memorials?.filter(m => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return new Date(m.createdAt) > sevenDaysAgo;
+    }).length || 0,
+    recentLeads: leads?.filter(l => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return new Date(l.createdAt) > sevenDaysAgo;
+    }).length || 0,
   };
 
   const formatDate = (date: string | Date) => {
@@ -58,11 +76,11 @@ export default function AdminDashboardPage() {
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Admin</h1>
-          <p className="text-gray-500">Visão geral do sistema</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Painel de Controle</h1>
+          <p className="text-gray-500">Visão geral em tempo real</p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Real Current Situation */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="card-modern p-6">
             <div className="flex items-center justify-between mb-4">
@@ -71,17 +89,13 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <p className="text-3xl font-bold text-gray-900">{stats.totalMemorials}</p>
-            <p className="text-sm text-gray-500">Total de Memoriais</p>
-          </Card>
-
-          <Card className="card-modern p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-              </div>
+            <p className="text-sm text-gray-500 mb-2">Memoriais Totais</p>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-emerald-600 font-medium">{stats.activeMemorials} ativos</span>
+              {stats.recentMemorials > 0 && (
+                <span className="text-gray-400">• +{stats.recentMemorials} esta semana</span>
+              )}
             </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.activeMemorials}</p>
-            <p className="text-sm text-gray-500">Memoriais Ativos</p>
           </Card>
 
           <Card className="card-modern p-6">
@@ -91,7 +105,25 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <p className="text-3xl font-bold text-gray-900">{stats.pendingMemorials}</p>
-            <p className="text-sm text-gray-500">Pendentes de Dados</p>
+            <p className="text-sm text-gray-500 mb-2">Aguardando Dados</p>
+            {stats.pendingMemorials > 0 ? (
+              <p className="text-xs text-orange-600 font-medium">Requer atenção</p>
+            ) : (
+              <p className="text-xs text-emerald-600 font-medium">Tudo em dia</p>
+            )}
+          </Card>
+
+          <Card className="card-modern p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center">
+                <Star className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.historicalMemorials}</p>
+            <p className="text-sm text-gray-500 mb-2">Históricos</p>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-amber-600 font-medium">{stats.featuredMemorials} em destaque</span>
+            </div>
           </Card>
 
           <Card className="card-modern p-6">
@@ -101,10 +133,17 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <p className="text-3xl font-bold text-gray-900">{stats.totalLeads}</p>
-            <p className="text-sm text-gray-500">Leads Totais</p>
-            {stats.pendingLeads > 0 && (
-              <p className="text-xs text-orange-600 mt-1">{stats.pendingLeads} pendentes</p>
-            )}
+            <p className="text-sm text-gray-500 mb-2">Contatos Recebidos</p>
+            <div className="flex items-center gap-2 text-xs">
+              {stats.pendingLeads > 0 ? (
+                <span className="text-orange-600 font-medium">{stats.pendingLeads} pendentes</span>
+              ) : (
+                <span className="text-emerald-600 font-medium">Nenhum pendente</span>
+              )}
+              {stats.recentLeads > 0 && (
+                <span className="text-gray-400">• +{stats.recentLeads} esta semana</span>
+              )}
+            </div>
           </Card>
         </div>
 
@@ -113,13 +152,13 @@ export default function AdminDashboardPage() {
           {/* Recent Memorials */}
           <Card className="card-modern p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Memoriais Recentes</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Recentes</h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/admin/memorials")}
               >
-                Ver todos
+                Ver tudo
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
@@ -161,7 +200,7 @@ export default function AdminDashboardPage() {
                 ))
               ) : (
                 <p className="text-gray-500 text-sm text-center py-8">
-                  Nenhum memorial encontrado
+                  Nenhum registro ainda
                 </p>
               )}
             </div>
@@ -170,13 +209,13 @@ export default function AdminDashboardPage() {
           {/* Recent Leads */}
           <Card className="card-modern p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Leads Recentes</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Contatos Recentes</h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/admin/leads")}
               >
-                Ver todos
+                Ver tudo
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
@@ -207,7 +246,7 @@ export default function AdminDashboardPage() {
                 ))
               ) : (
                 <p className="text-gray-500 text-sm text-center py-8">
-                  Nenhum lead encontrado
+                  Nenhum contato ainda
                 </p>
               )}
             </div>
@@ -216,7 +255,7 @@ export default function AdminDashboardPage() {
 
         {/* Quick Actions */}
         <div className="mt-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Acesso Rápido</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Button
               variant="outline"
@@ -224,7 +263,7 @@ export default function AdminDashboardPage() {
               onClick={() => router.push("/admin/historical-memorials")}
             >
               <Star className="w-5 h-5 text-amber-600" />
-              <span className="text-sm">Memoriais Históricos</span>
+              <span className="text-sm">Históricos</span>
               <span className="text-xs text-gray-500">{stats.historicalMemorials} registros</span>
             </Button>
 
@@ -234,8 +273,10 @@ export default function AdminDashboardPage() {
               onClick={() => router.push("/admin/leads")}
             >
               <Users className="w-5 h-5 text-blue-600" />
-              <span className="text-sm">Gerenciar Leads</span>
-              <span className="text-xs text-gray-500">{stats.pendingLeads} pendentes</span>
+              <span className="text-sm">Contatos</span>
+              <span className="text-xs text-gray-500">
+                {stats.pendingLeads > 0 ? `${stats.pendingLeads} pendentes` : "Nenhum pendente"}
+              </span>
             </Button>
 
             <Button
@@ -244,7 +285,7 @@ export default function AdminDashboardPage() {
               onClick={() => router.push("/admin/memorials")}
             >
               <FileText className="w-5 h-5 text-teal-600" />
-              <span className="text-sm">Todos Memoriais</span>
+              <span className="text-sm">Memoriais</span>
               <span className="text-xs text-gray-500">{stats.totalMemorials} total</span>
             </Button>
 
@@ -254,7 +295,7 @@ export default function AdminDashboardPage() {
               onClick={() => router.push("/admin/funeral-homes")}
             >
               <Eye className="w-5 h-5 text-purple-600" />
-              <span className="text-sm">Funerárias</span>
+              <span className="text-sm">Parceiros</span>
               <span className="text-xs text-gray-500">Gerenciar</span>
             </Button>
           </div>
