@@ -42,6 +42,7 @@
   "exclude": [
     "node_modules",
     "generated",
+    "scripts",
     "**/*.old",
     "**/api.old/**",
     "**/_core/*.old",

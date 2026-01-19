@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   QrCode, Heart, Calendar, MapPin, Users, Image,
   MessageSquare, Share2, ArrowLeft, Send, Download,
-  FileText, BookOpen, Newspaper, Video, Building2, GraduationCap, ExternalLink, Landmark
+  FileText, BookOpen, Newspaper, Video, Building2, GraduationCap, ExternalLink, Landmark, Star
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useParams } from "next/navigation";

@@ -84,7 +84,7 @@ function CheckoutContent() {
     }
 
     // Auto-select the only available plan (essencial)
-    if (plans.length > 0 && !selectedPlanId) {
+    if (plans.length > 0 && !selectedPlanId && plans[0]) {
       setSelectedPlanId(plans[0].id);
     }
   }, [planFromUrl]);
