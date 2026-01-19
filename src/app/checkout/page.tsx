@@ -85,6 +85,7 @@ function CheckoutContent() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [cardholderName, setCardholderName] = useState("");
   const [paymentIntentId, setPaymentIntentId] = useState<string>("");
+  const [isCardReady, setIsCardReady] = useState(false);
 
   // Stripe hooks
   const stripe = useStripe();
@@ -115,6 +116,20 @@ function CheckoutContent() {
     }
   }, [planFromUrl]);
 
+  // Check if CardElement is ready when on payment step with card method
+  useEffect(() => {
+    if (step === "payment" && paymentMethod === "card" && stripe && elements) {
+      // Small delay to ensure CardElement has mounted
+      const timer = setTimeout(() => {
+        const cardElement = elements.getElement(CardElement);
+        setIsCardReady(!!cardElement);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setIsCardReady(false);
+    }
+  }, [step, paymentMethod, stripe, elements]);
+
   const handleSelectPlan = (planId: string) => {
     setSelectedPlanId(planId);
   };
@@ -143,6 +158,13 @@ function CheckoutContent() {
         toast.error("Nome do titular é obrigatório.");
         return false;
       }
+
+      // Check if CardElement is available
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        toast.error("Formulário do cartão não está carregado. Por favor, aguarde um momento e tente novamente.");
+        return false;
+      }
     }
 
     return true;
@@ -165,10 +187,18 @@ function CheckoutContent() {
     }
 
     setIsLoading(true);
-    setStep("processing");
 
     try {
-      // Step 1: Create payment intent with Stripe
+      // Step 1: Get CardElement FIRST before any state changes that might unmount it
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        console.error("[Checkout] CardElement not found. Payment method:", paymentMethod, "Stripe:", !!stripe, "Elements:", !!elements);
+        toast.error("Erro ao processar pagamento: formulário do cartão não está disponível. Por favor, recarregue a página e tente novamente.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Create payment intent with Stripe
       const toastId = toast.loading("Criando intenção de pagamento...");
 
       const paymentResult = await createPaymentMutation.mutateAsync({
@@ -178,7 +208,6 @@ function CheckoutContent() {
 
       if (!paymentResult.id) {
         toast.error("Erro ao criar intenção de pagamento", { id: toastId });
-        setStep("payment");
         setIsLoading(false);
         return;
       }
@@ -186,18 +215,13 @@ function CheckoutContent() {
       setPaymentIntentId(paymentResult.id);
       toast.success("Intenção de pagamento criada", { id: toastId });
 
-      // Step 2: Create payment method using Stripe.js (client-side, secure)
+      // Step 3: Create payment method using Stripe.js (client-side, secure)
       toast.loading("Validando informações do cartão...");
 
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        toast.error("Elemento do cartão não encontrado");
-        setStep("payment");
-        setIsLoading(false);
-        return;
-      }
+      // Now change step to processing since we have the card element reference
+      setStep("processing");
 
-      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+      const { error: pmError, paymentMethod: stripePaymentMethod } = await stripe.createPaymentMethod({
         type: "card",
         card: cardElement,
         billing_details: {
@@ -213,25 +237,25 @@ function CheckoutContent() {
         return;
       }
 
-      if (!paymentMethod) {
+      if (!stripePaymentMethod) {
         toast.error("Falha ao criar método de pagamento");
         setStep("payment");
         setIsLoading(false);
         return;
       }
 
-      // Step 3: Confirm payment with payment method ID (secure - no card data sent to backend)
+      // Step 4: Confirm payment with payment method ID (secure - no card data sent to backend)
       toast.loading("Processando pagamento...");
 
       const confirmResult = await confirmPaymentMutation.mutateAsync({
         paymentIntentId: paymentResult.id,
-        paymentMethodId: paymentMethod.id,
+        paymentMethodId: stripePaymentMethod.id,
       });
 
       if (confirmResult.status === "succeeded") {
         toast.success("Pagamento processado com sucesso!");
 
-        // Step 4: Create subscription record after successful payment
+        // Step 5: Create subscription record after successful payment
         try {
           toast.loading("Criando sua assinatura...");
 
@@ -468,11 +492,11 @@ function CheckoutContent() {
                     {/* Card Form with Stripe Elements */}
                     {paymentMethod === "card" && (
                       <div className="space-y-4 pt-4 border-t">
-                        {!stripe && (
+                        {(!stripe || !isCardReady) && (
                           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                             <p className="text-sm text-yellow-800 flex items-center gap-2">
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              Carregando Stripe...
+                              {!stripe ? "Carregando Stripe..." : "Carregando formulário do cartão..."}
                             </p>
                           </div>
                         )}
@@ -543,17 +567,17 @@ function CheckoutContent() {
                     <Button
                       onClick={handleProcessPayment}
                       className="w-full btn-primary"
-                      disabled={isLoading || (paymentMethod === "card" && !stripe)}
+                      disabled={isLoading || (paymentMethod === "card" && (!stripe || !isCardReady))}
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Processando...
                         </>
-                      ) : (paymentMethod === "card" && !stripe) ? (
+                      ) : (paymentMethod === "card" && (!stripe || !isCardReady)) ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Aguardando Stripe...
+                          Carregando formulário...
                         </>
                       ) : (
                         <>
