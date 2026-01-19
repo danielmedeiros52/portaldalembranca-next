@@ -153,6 +153,12 @@ function CheckoutContent() {
       return;
     }
 
+    // Check if PIX is selected (not yet implemented)
+    if (paymentMethod === "pix") {
+      toast.error("Pagamento via PIX ainda não está disponível. Por favor, selecione pagamento com cartão.");
+      return;
+    }
+
     if (!stripe || !elements) {
       toast.error("Stripe não foi carregado. Recarregue a página.");
       return;
@@ -446,15 +452,15 @@ function CheckoutContent() {
                           <span className="font-medium">Cartão</span>
                         </button>
                         <button
-                          onClick={() => setPaymentMethod("pix")}
-                          className={`p-4 border-2 rounded-xl flex items-center justify-center gap-2 transition-all ${
-                            paymentMethod === "pix"
-                              ? "border-teal-600 bg-teal-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
+                          onClick={() => toast.info("Pagamento via PIX estará disponível em breve!")}
+                          disabled
+                          className="p-4 border-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed relative"
                         >
-                          <QrCode className="w-5 h-5" />
-                          <span className="font-medium">PIX</span>
+                          <div className="flex items-center gap-2">
+                            <QrCode className="w-5 h-5 text-gray-400" />
+                            <span className="font-medium text-gray-400">PIX</span>
+                          </div>
+                          <span className="text-xs text-gray-500">Em breve</span>
                         </button>
                       </div>
                     </div>
