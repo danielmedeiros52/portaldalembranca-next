@@ -268,6 +268,12 @@ const memorialRouter = router({
         throw new Error("Não autenticado");
       }
 
+      // Check if user is an admin (openId starts with "admin-")
+      if (ctx.user.openId.startsWith(ADMIN_USER_PREFIX + "-")) {
+        // Admins can see all memorials
+        return db.getAllMemorials();
+      }
+
       // Check if user is a funeral home (openId starts with "funeral-")
       if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
         const funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
