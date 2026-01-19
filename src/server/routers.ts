@@ -806,6 +806,107 @@ const paymentRouter = router({
       const { getPaymentIntentStatus } = await import('~/server/payments');
       return getPaymentIntentStatus(input.paymentIntentId);
     }),
+
+  // Subscription management
+  createSubscription: protectedProcedure
+    .input(z.object({
+      planId: z.string(),
+      stripeCustomerId: z.string().optional(),
+      stripeSubscriptionId: z.string().optional(),
+      durationMonths: z.number().positive().default(12),
+      memorialId: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { createSubscription } = await import('~/server/payments');
+
+      // Determine user type and ID from openId
+      let userId: number;
+      let userType: "funeral_home" | "family_user" | "oauth_user";
+
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        userId = parseInt(ctx.user.openId.replace(FUNERAL_HOME_PREFIX + "-", ""));
+        userType = "funeral_home";
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        userId = parseInt(ctx.user.openId.replace(FAMILY_USER_PREFIX + "-", ""));
+        userType = "family_user";
+      } else {
+        // For OAuth users, we'd need to parse differently or store differently
+        throw new Error("OAuth user subscriptions not yet implemented");
+      }
+
+      const now = new Date();
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + input.durationMonths);
+
+      const subscriptionId = await createSubscription({
+        userId,
+        userType,
+        planId: input.planId,
+        stripeCustomerId: input.stripeCustomerId,
+        stripeSubscriptionId: input.stripeSubscriptionId,
+        status: "active",
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        memorialId: input.memorialId,
+      });
+
+      return { subscriptionId };
+    }),
+
+  getMySubscriptions: protectedProcedure
+    .query(async ({ ctx }) => {
+      const { getUserSubscriptions } = await import('~/server/payments');
+
+      // Determine user type and ID from openId
+      let userId: number;
+      let userType: "funeral_home" | "family_user" | "oauth_user";
+
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        userId = parseInt(ctx.user.openId.replace(FUNERAL_HOME_PREFIX + "-", ""));
+        userType = "funeral_home";
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        userId = parseInt(ctx.user.openId.replace(FAMILY_USER_PREFIX + "-", ""));
+        userType = "family_user";
+      } else {
+        throw new Error("OAuth user subscriptions not yet implemented");
+      }
+
+      return getUserSubscriptions(userId, userType);
+    }),
+
+  getPaymentTransaction: protectedProcedure
+    .input(z.object({
+      paymentIntentId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const { getPaymentTransaction } = await import('~/server/payments');
+      return getPaymentTransaction(input.paymentIntentId);
+    }),
+
+  cancelSubscription: protectedProcedure
+    .input(z.object({
+      subscriptionId: z.number(),
+      cancelAtPeriodEnd: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      const database = await getDb();
+      if (!database) {
+        throw new Error("Database not available");
+      }
+
+      const { subscriptions } = await import('../../drizzle/schema');
+
+      await database
+        .update(subscriptions)
+        .set({
+          cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+          status: input.cancelAtPeriodEnd ? "active" : "cancelled",
+          updatedAt: new Date(),
+        })
+        .where(eq(subscriptions.id, input.subscriptionId));
+
+      return { success: true };
+    }),
 });
 
 export const appRouter = router({

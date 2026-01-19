@@ -9,6 +9,10 @@ export const statusEnum = pgEnum("status", ["active", "pending_data", "inactive"
 export const productionStatusEnum = pgEnum("production_status", ["new", "in_production", "waiting_data", "ready", "delivered", "cancelled"]);
 export const priorityEnum = pgEnum("priority", ["low", "normal", "high", "urgent"]);
 export const leadStatusEnum = pgEnum("lead_status", ["pending", "contacted", "converted", "rejected"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "cancelled", "expired", "past_due", "trialing"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded", "cancelled"]);
+export const paymentMethodEnum = pgEnum("payment_method", ["card", "pix", "boleto"]);
+export const userTypeEnum = pgEnum("user_type", ["funeral_home", "family_user", "oauth_user"]);
 
 /**
  * Core user table backing auth flow.
@@ -228,3 +232,69 @@ export const dashboardSettings = pgTable("dashboard_settings", {
 
 export type DashboardSetting = typeof dashboardSettings.$inferSelect;
 export type InsertDashboardSetting = typeof dashboardSettings.$inferInsert;
+
+/**
+ * Subscriptions table for tracking user subscriptions and plans
+ */
+export const subscriptions = pgTable("subscriptions", {
+  id: serial("id").primaryKey(),
+  /** User ID - can reference funeralHomes, familyUsers, or users table depending on userType */
+  userId: integer("user_id").notNull(),
+  /** Type of user this subscription belongs to */
+  userType: userTypeEnum("user_type").notNull(),
+  /** Plan ID from Stripe products (essencial, premium, familia) */
+  planId: varchar("plan_id", { length: 50 }).notNull(),
+  /** Stripe customer ID for payment management */
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  /** Stripe subscription ID (if using Stripe subscriptions vs one-time payments) */
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  /** Current subscription status */
+  status: subscriptionStatusEnum("status").default("active").notNull(),
+  /** Start of current billing period */
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  /** End of current billing period */
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  /** Whether to cancel subscription at period end */
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
+  /** Optional: Link to specific memorial this subscription unlocks */
+  memorialId: integer("memorial_id"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = typeof subscriptions.$inferInsert;
+
+/**
+ * Payment transactions table for tracking all payment attempts and outcomes
+ */
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: serial("id").primaryKey(),
+  /** Link to subscription (optional - payments may exist before subscription creation) */
+  subscriptionId: integer("subscription_id"),
+  /** Stripe payment intent ID */
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }).notNull().unique(),
+  /** Stripe payment method ID */
+  stripePaymentMethodId: varchar("stripe_payment_method_id", { length: 255 }),
+  /** Amount in cents (e.g., 1990 for R$ 19.90) */
+  amount: integer("amount").notNull(),
+  /** Currency code (default: BRL) */
+  currency: varchar("currency", { length: 3 }).default("brl").notNull(),
+  /** Payment status */
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  /** Payment method used */
+  paymentMethod: paymentMethodEnum("payment_method").notNull(),
+  /** Customer email from payment */
+  customerEmail: varchar("customer_email", { length: 320 }),
+  /** Plan ID purchased */
+  planId: varchar("plan_id", { length: 50 }).notNull(),
+  /** Reason for failure if status is failed */
+  failureReason: text("failure_reason"),
+  /** Additional metadata as JSON string */
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;

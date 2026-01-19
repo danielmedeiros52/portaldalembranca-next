@@ -93,6 +93,7 @@ function CheckoutContent() {
   // tRPC mutations
   const createPaymentMutation = api.payment.createPaymentIntent.useMutation();
   const confirmPaymentMutation = api.payment.confirmPayment.useMutation();
+  const createSubscriptionMutation = api.payment.createSubscription.useMutation();
 
   const planFromUrl = searchParams.get("plan");
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
@@ -223,6 +224,25 @@ function CheckoutContent() {
 
       if (confirmResult.status === "succeeded") {
         toast.success("Pagamento processado com sucesso!");
+
+        // Step 4: Create subscription record after successful payment
+        try {
+          toast.loading("Criando sua assinatura...");
+
+          await createSubscriptionMutation.mutateAsync({
+            planId: selectedPlanId,
+            durationMonths: 12, // Annual subscription
+            // Optional: stripeCustomerId and stripeSubscriptionId can be added if using Stripe subscriptions
+          });
+
+          toast.success("Assinatura criada com sucesso!");
+        } catch (subError: any) {
+          console.error("Subscription creation error:", subError);
+          // Don't fail the entire flow if subscription creation fails
+          // The payment was successful, so we still show success
+          toast.error("Aviso: Pagamento confirmado, mas houve erro ao criar assinatura. Entre em contato com o suporte.");
+        }
+
         setStep("success");
       } else if (confirmResult.status === "requires_action") {
         // Payment requires additional action (e.g., 3D Secure)
