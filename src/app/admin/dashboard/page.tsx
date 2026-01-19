@@ -118,17 +118,41 @@ export default function AdminDashboardPage() {
             )}
           </Card>
 
-          <Card className="card-modern p-6">
+          <Card
+            className="card-modern p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push("/admin/historical-memorials")}
+          >
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center">
                 <Star className="w-6 h-6 text-amber-600" />
               </div>
+              <ChevronRight className="w-5 h-5 text-gray-400" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.historicalMemorials}</p>
-            <p className="text-sm text-gray-500 mb-2">Históricos</p>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-amber-600 font-medium">{stats.featuredMemorials} em destaque</span>
-            </div>
+            {loadingHistorical ? (
+              <>
+                <div className="h-9 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <p className="text-sm text-gray-500 mb-2">Carregando...</p>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-900">{stats.historicalMemorials}</p>
+                <p className="text-sm text-gray-500 mb-2">Personalidades Históricas</p>
+                <div className="flex items-center gap-2 text-xs">
+                  {stats.historicalMemorials > 0 ? (
+                    <>
+                      <span className="text-amber-600 font-medium">
+                        {stats.featuredMemorials} em destaque
+                      </span>
+                      {stats.featuredMemorials === 0 && (
+                        <span className="text-gray-400">• Adicione destaques</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Nenhum registro • Clique para importar</span>
+                  )}
+                </div>
+              </>
+            )}
           </Card>
 
           <Card className="card-modern p-6">
