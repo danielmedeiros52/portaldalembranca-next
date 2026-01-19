@@ -18,6 +18,7 @@ const APP_TITLE = "Portal da Lembrança";
 // Load Stripe outside of component to avoid recreating on every render
 // Use process.env directly for client-side access to NEXT_PUBLIC_ variables
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+console.log("[Checkout] Stripe publishable key configured:", !!stripePublishableKey, stripePublishableKey?.substring(0, 7) + "...");
 const stripePromise = stripePublishableKey
   ? loadStripe(stripePublishableKey)
   : null;
@@ -90,6 +91,11 @@ function CheckoutContent() {
   // Stripe hooks
   const stripe = useStripe();
   const elements = useElements();
+
+  // Debug: Log when Stripe loads
+  useEffect(() => {
+    console.log("[Checkout] Stripe instance:", !!stripe, "Elements instance:", !!elements);
+  }, [stripe, elements]);
 
   // tRPC mutations
   const createPaymentMutation = api.payment.createPaymentIntent.useMutation();
@@ -171,7 +177,13 @@ function CheckoutContent() {
   };
 
   const handleProcessPayment = async () => {
+    console.log("[Checkout] ===== Starting payment process =====");
+    console.log("[Checkout] Plan:", selectedPlanId, "Payment method:", paymentMethod);
+    console.log("[Checkout] Customer email:", customerEmail, "Cardholder name:", cardholderName);
+    console.log("[Checkout] Stripe available:", !!stripe, "Elements available:", !!elements);
+
     if (!selectedPlanId || !validatePaymentForm()) {
+      console.error("[Checkout] Validation failed");
       return;
     }
 
@@ -182,6 +194,7 @@ function CheckoutContent() {
     }
 
     if (!stripe || !elements) {
+      console.error("[Checkout] Stripe or Elements not loaded");
       toast.error("Stripe não foi carregado. Recarregue a página.");
       return;
     }
@@ -191,6 +204,8 @@ function CheckoutContent() {
     try {
       // Step 1: Get CardElement FIRST before any state changes that might unmount it
       const cardElement = elements.getElement(CardElement);
+      console.log("[Checkout] CardElement obtained:", !!cardElement);
+
       if (!cardElement) {
         console.error("[Checkout] CardElement not found. Payment method:", paymentMethod, "Stripe:", !!stripe, "Elements:", !!elements);
         toast.error("Erro ao processar pagamento: formulário do cartão não está disponível. Por favor, recarregue a página e tente novamente.");
@@ -218,14 +233,41 @@ function CheckoutContent() {
       // Step 3: Create payment method using Stripe.js (client-side, secure)
       const validatingToast = toast.loading("Validando informações do cartão...");
 
-      const { error: pmError, paymentMethod: stripePaymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card: cardElement,
-        billing_details: {
-          name: cardholderName,
-          email: customerEmail,
-        },
-      });
+      console.log("[Checkout] Creating payment method with Stripe.js...");
+
+      let stripePaymentMethod;
+      let pmError;
+
+      try {
+        // Add a timeout to catch if Stripe.js hangs
+        const createPaymentMethodPromise = stripe.createPaymentMethod({
+          type: "card",
+          card: cardElement,
+          billing_details: {
+            name: cardholderName,
+            email: customerEmail,
+          },
+        });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout: Stripe demorou muito para responder")), 30000)
+        );
+
+        const result = await Promise.race([createPaymentMethodPromise, timeoutPromise]) as any;
+        pmError = result.error;
+        stripePaymentMethod = result.paymentMethod;
+
+        console.log("[Checkout] Stripe.createPaymentMethod result:", {
+          hasError: !!pmError,
+          hasPaymentMethod: !!stripePaymentMethod,
+          errorMessage: pmError?.message
+        });
+      } catch (error: any) {
+        console.error("[Checkout] Exception during payment method creation:", error);
+        toast.error(error.message || "Erro ao criar método de pagamento", { id: validatingToast });
+        setIsLoading(false);
+        return;
+      }
 
       if (pmError) {
         console.error("[Checkout] Payment method creation error:", pmError);
@@ -241,6 +283,7 @@ function CheckoutContent() {
         return;
       }
 
+      console.log("[Checkout] Payment method created successfully:", stripePaymentMethod.id);
       toast.success("Cartão validado!", { id: validatingToast });
 
       // Now change step to processing since we have the payment method
