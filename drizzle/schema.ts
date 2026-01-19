@@ -90,6 +90,7 @@ export const memorials = pgTable("memorials", {
   filiation: text("filiation"),
   biography: text("biography"),
   mainPhoto: varchar("main_photo", { length: 500 }),
+  videoUrl: varchar("video_url", { length: 500 }),
   visibility: visibilityEnum("visibility").default("public").notNull(),
   status: statusEnum("status").default("pending_data").notNull(),
   funeralHomeId: integer("funeral_home_id"),
