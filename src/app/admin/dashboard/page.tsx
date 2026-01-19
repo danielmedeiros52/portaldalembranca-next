@@ -25,20 +25,25 @@ export default function AdminDashboardPage() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: historicalMemorials, isLoading: loadingHistorical } = api.admin.getAllHistoricalMemorials.useQuery(undefined, {
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
+
   const { data: leads, isLoading: loadingLeads } = api.lead.getAll.useQuery(undefined, {
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,
   });
 
-  const isLoading = loadingMemorials || loadingLeads;
+  const isLoading = loadingMemorials || loadingLeads || loadingHistorical;
 
   // Calculate real-time stats showing current situation
   const stats = {
     totalMemorials: memorials?.length || 0,
     activeMemorials: memorials?.filter(m => m.status === "active").length || 0,
     pendingMemorials: memorials?.filter(m => m.status === "pending_data").length || 0,
-    historicalMemorials: memorials?.filter(m => m.isHistorical).length || 0,
-    featuredMemorials: memorials?.filter(m => m.isFeatured).length || 0,
+    historicalMemorials: historicalMemorials?.length || 0,
+    featuredMemorials: historicalMemorials?.filter(m => m.isFeatured).length || 0,
     totalLeads: leads?.length || 0,
     pendingLeads: leads?.filter(l => l.status === "pending").length || 0,
     recentMemorials: memorials?.filter(m => {
