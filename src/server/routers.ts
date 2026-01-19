@@ -268,24 +268,32 @@ const memorialRouter = router({
         throw new Error("Não autenticado");
       }
 
+      console.log("🔍 memorial.list called by:", ctx.user.openId);
+
       // Check if user is an admin (openId starts with "admin-")
       if (ctx.user.openId.startsWith(ADMIN_USER_PREFIX + "-")) {
+        console.log("✅ Admin detected, fetching all memorials");
         // Admins can see all memorials
-        return db.getAllMemorials();
+        const allMemorials = await db.getAllMemorials();
+        console.log("📊 Found", allMemorials.length, "total memorials");
+        return allMemorials;
       }
 
       // Check if user is a funeral home (openId starts with "funeral-")
       if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        console.log("🏢 Funeral home detected");
         const funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
         return db.getMemorialsByFuneralHomeId(funeralHomeId);
       }
 
       // Check if user is a family user (openId starts with "family-")
       if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        console.log("👨‍👩‍👧‍👦 Family user detected");
         const familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
         return db.getMemorialsByFamilyUserId(familyUserId);
       }
 
+      console.log("⚠️ Unknown user type, returning empty array");
       // If neither, return empty array
       return [];
     }),
@@ -549,8 +557,11 @@ const leadRouter = router({
     }),
 
   getAll: protectedProcedure
-    .query(async () => {
-      return db.getAllLeads();
+    .query(async ({ ctx }) => {
+      console.log("📧 lead.getAll called by:", ctx.user?.openId);
+      const leads = await db.getAllLeads();
+      console.log("📊 Found", leads.length, "leads");
+      return leads;
     }),
 
   update: protectedProcedure
@@ -591,8 +602,15 @@ const adminRouter = router({
 
       await db.updateAdminLastLogin(admin.id);
 
+      const adminOpenId = buildAccountOpenId(ADMIN_USER_PREFIX, admin.id);
+      console.log("🔐 Admin login successful:", {
+        adminId: admin.id,
+        openId: adminOpenId,
+        email: admin.email,
+      });
+
       await persistUserSession(ctx, {
-        openId: buildAccountOpenId(ADMIN_USER_PREFIX, admin.id),
+        openId: adminOpenId,
         name: admin.name,
         email: admin.email,
         loginMethod: "admin",
@@ -809,15 +827,20 @@ const adminRouter = router({
 
   // Get all historical memorials
   getAllHistoricalMemorials: protectedProcedure
-    .query(async () => {
+    .query(async ({ ctx }) => {
+      console.log("🏛️ getAllHistoricalMemorials called by:", ctx.user?.openId);
+
       const dbInstance = await getDb();
       if (!dbInstance) throw new Error("Banco de dados não disponível");
 
-      return await dbInstance
+      const historicals = await dbInstance
         .select()
         .from(memorials)
         .where(eq(memorials.isHistorical, true))
         .orderBy(memorials.fullName);
+
+      console.log("📊 Found", historicals.length, "historical memorials");
+      return historicals;
     }),
 
   // Toggle historical status
