@@ -13,6 +13,7 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded", "cancelled"]);
 export const paymentMethodEnum = pgEnum("payment_method", ["card", "pix", "boleto"]);
 export const userTypeEnum = pgEnum("user_type", ["funeral_home", "family_user", "oauth_user"]);
+export const dedicationStatusEnum = pgEnum("dedication_status", ["pending", "approved", "rejected"]);
 
 /**
  * Core user table backing auth flow.
@@ -141,6 +142,9 @@ export const dedications = pgTable("dedications", {
   memorialId: integer("memorial_id").notNull(),
   authorName: varchar("author_name", { length: 255 }).notNull(),
   message: text("message").notNull(),
+  status: dedicationStatusEnum("status").default("pending").notNull(),
+  reviewedBy: integer("reviewed_by"), // User ID who approved/rejected
+  reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

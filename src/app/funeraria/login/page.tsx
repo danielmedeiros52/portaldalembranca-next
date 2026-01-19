@@ -1,24 +1,20 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
-import { QrCode, Building2, Users, ArrowLeft, Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
-import { loginFuneralHome, loginFamilyUser } from "~/app/actions/auth";
+import { QrCode, Building2, ArrowLeft, Eye, EyeOff, Mail, Lock, Loader2, Users } from "lucide-react";
+import { loginFuneralHome } from "~/app/actions/auth";
 
 const APP_TITLE = "Portal da Lembrança";
 
-function LoginPageContent() {
+function FuneralHomeLoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Get plan from URL query params
-  const selectedPlan = searchParams.get("plan");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +33,8 @@ function LoginPageContent() {
     setIsLoading(true);
 
     try {
-      // Family login only
-      const result = await loginFamilyUser(email, password);
+      // Funeral home login
+      const result = await loginFuneralHome(email, password);
 
       if (!result.success) {
         toast.error(result.error || "E-mail ou senha inválidos");
@@ -62,13 +58,7 @@ function LoginPageContent() {
       }
 
       toast.success("Login realizado com sucesso!");
-
-      // Redirect after successful login
-      if (selectedPlan) {
-        router.push(`/checkout?plan=${selectedPlan}`);
-      } else {
-        router.push("/dashboard");
-      }
+      router.push("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
       toast.error(error.message || "E-mail ou senha inválidos");
@@ -95,22 +85,22 @@ function LoginPageContent() {
           </div>
 
           <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
-            Um lugar para recordar e homenagear.
+            Portal exclusivo para parceiros.
           </h1>
           <p className="text-xl text-white/80 mb-8 max-w-md">
-            Acesse sua conta para gerenciar os memoriais e manter vivas as histórias de quem partiu.
+            Gerencie memoriais para suas famílias atendidas e ofereça um serviço completo de lembrança digital.
           </p>
 
           {/* Feature Pills */}
           <div className="flex flex-wrap gap-3">
             <div className="px-4 py-2 rounded-full text-white text-sm" style={{ background: 'rgba(0, 0, 0, 0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-              ✨ Códigos QR Únicos
+              🏢 Gestão Centralizada
             </div>
             <div className="px-4 py-2 rounded-full text-white text-sm" style={{ background: 'rgba(0, 0, 0, 0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-              📷 Galerias de Fotos
+              👨‍👩‍👧‍👦 Suporte às Famílias
             </div>
             <div className="px-4 py-2 rounded-full text-white text-sm" style={{ background: 'rgba(0, 0, 0, 0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-              💬 Dedicações
+              📊 Relatórios
             </div>
           </div>
         </div>
@@ -119,7 +109,7 @@ function LoginPageContent() {
       {/* Right Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-md">
-          {/* Back Button */}
+          {/* Navigation */}
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => router.push("/")}
@@ -129,11 +119,11 @@ function LoginPageContent() {
               Voltar ao início
             </button>
             <button
-              onClick={() => router.push("/funeraria/login")}
-              className="flex items-center gap-2 text-teal-600 hover:text-teal-700 transition-colors text-sm font-medium"
+              onClick={() => router.push("/login")}
+              className="flex items-center gap-2 text-rose-600 hover:text-rose-700 transition-colors text-sm font-medium"
             >
-              <Building2 className="w-4 h-4" />
-              Acesso Funerária
+              <Users className="w-4 h-4" />
+              Acesso Família
             </button>
           </div>
 
@@ -146,22 +136,15 @@ function LoginPageContent() {
           </div>
 
           <div className="card-modern p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Olá! Acesse sua conta</h2>
-            <p className="text-gray-500 mb-8">Preencha seus dados para acessar o portal.</p>
-
-            {/* Plan Selection Notice */}
-            {selectedPlan && (
-              <div className="mb-6 p-4 bg-teal-50 rounded-xl border border-teal-200">
-                <p className="text-sm text-teal-800 text-center">
-                  <strong>Plano selecionado:</strong> {selectedPlan === 'essencial' ? 'Memorial Essencial' : selectedPlan === 'premium' ? 'Memorial Premium' : 'Plano Família'}
-                </p>
-                <p className="text-xs text-teal-600 text-center mt-1">
-                  Faça login ou cadastre-se para continuar com a contratação.
-                </p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-teal-700" />
               </div>
-            )}
+              <h2 className="text-2xl font-bold text-gray-900">Acesso Funerária</h2>
+            </div>
+            <p className="text-gray-500 mb-8">Entre com suas credenciais de parceiro.</p>
 
-            {/* Family Login Form */}
+            {/* Funeral Home Login Form */}
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
@@ -169,7 +152,7 @@ function LoginPageContent() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="email"
-                    placeholder="familia@email.com"
+                    placeholder="contato@funeraria.com.br"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="input-modern pl-12"
@@ -200,37 +183,37 @@ function LoginPageContent() {
               </div>
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500" />
+                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500" />
                   <span className="text-sm text-gray-600">Lembrar-me</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => router.push("/forgot-password")}
-                  className="text-sm text-rose-600 hover:text-rose-700"
+                  className="text-sm text-teal-600 hover:text-teal-700"
                 >
                   Esqueceu a senha?
                 </button>
               </div>
-              <Button type="submit" className="w-full btn-secondary" disabled={isLoading}>
+              <Button type="submit" className="w-full btn-primary" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Entrando...
                   </>
                 ) : (
-                  selectedPlan ? "Entrar e Continuar" : "Entrar"
+                  "Entrar"
                 )}
               </Button>
             </form>
 
             {/* Register Link */}
             <p className="text-center text-gray-500 mt-6">
-              Não tem uma conta?{" "}
+              Quer se tornar um parceiro?{" "}
               <button
-                onClick={() => router.push(selectedPlan ? `/register?plan=${selectedPlan}` : "/register")}
+                onClick={() => router.push("/register")}
                 className="text-teal-600 hover:text-teal-700 font-medium"
               >
-                Registre-se
+                Registre sua funerária
               </button>
             </p>
           </div>
@@ -240,14 +223,10 @@ function LoginPageContent() {
   );
 }
 
-export default function LoginPage() {
+export default function FuneralHomeLoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-      </div>
-    }>
-      <LoginPageContent />
+    <Suspense fallback={<div>Carregando...</div>}>
+      <FuneralHomeLoginContent />
     </Suspense>
   );
 }

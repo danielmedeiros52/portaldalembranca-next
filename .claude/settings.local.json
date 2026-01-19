@@ -21,7 +21,8 @@
       "Bash(del \"src\\\\lib\\\\workos.ts\")",
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 23256 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 23256 -Force\")",
+      "Bash(curl:*)"
     ]
   }
 }

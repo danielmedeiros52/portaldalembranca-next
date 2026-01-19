@@ -7,7 +7,7 @@ import { getDb } from "~/server/db";
 import { funeralHomes, familyUsers, memorials, descendants, photos, dedications, leads, orders, orderHistory, adminUsers } from "../../drizzle/schema";
 import type { InsertMemorial, InsertDescendant, InsertPhoto, InsertDedication, InsertLead, InsertOrder, InsertOrderHistory, InsertAdminUser } from "../../drizzle/schema";
 import * as db from "~/server/db";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { generateMemorialQRCode, generateMemorialQRCodeSVG } from "~/server/qrcode";
@@ -66,10 +66,32 @@ function buildAccountOpenId(prefix: string, id: number) {
 }
 
 // Helper to generate unique slug
-function generateSlug(name: string): string {
+// Regular memorials: includes ID to avoid ambiguity (e.g., "maria-silva-123")
+// Historical memorials: pretty slug without ID (e.g., "dom-pedro-ii")
+function generateSlug(name: string, id?: number, isHistorical = false): string {
+  const baseName = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Replace multiple hyphens with single
+    .trim();
+
+  if (isHistorical) {
+    // Historical memorials get pretty slugs (e.g., "dom-pedro-ii")
+    return baseName.substring(0, 50);
+  }
+
+  // Regular memorials include ID to avoid ambiguity (e.g., "maria-silva-123")
+  if (id) {
+    return `${baseName.substring(0, 40)}-${id}`;
+  }
+
+  // Temporary slug before we have the ID
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${name.toLowerCase().replace(/\s+/g, "-").substring(0, 20)}-${timestamp}-${random}`;
+  const random = Math.random().toString(36).substring(2, 6);
+  return `${baseName.substring(0, 30)}-tmp-${timestamp}-${random}`;
 }
 
 // Auth Router
@@ -343,58 +365,63 @@ const memorialRouter = router({
       return db.getMemorialById(input.id);
     }),
 
-  // Create memorial (funeral home only)
+  // Create memorial (anyone can create)
   create: protectedProcedure
     .input(z.object({
       fullName: z.string().min(1),
       birthDate: z.string().optional(),
       deathDate: z.string().optional(),
       birthplace: z.string().optional(),
-      familyEmail: z.string().email(),
-      funeralHomeId: z.number(),
+      funeralHomeId: z.number().optional(), // Optional - only if created by funeral home
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const dbInstance = await getDb();
       if (!dbInstance) throw new Error("Banco de dados não disponível");
 
-      // Get or create family user
-      let familyUser = await db.getFamilyUserByEmail(input.familyEmail);
-      let familyUserId: number;
+      if (!ctx.user) throw new Error("Não autenticado");
 
-      if (!familyUser) {
-        const invitationToken = crypto.randomBytes(32).toString("hex");
-        const invitationExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      let familyUserId: number | null = null;
+      let funeralHomeId: number | null = input.funeralHomeId || null;
 
-        await dbInstance.insert(familyUsers).values({
-          name: input.familyEmail.split("@")[0] || input.familyEmail,
-          email: input.familyEmail,
-          invitationToken,
-          invitationExpiry,
-          isActive: false,
-        });
-
-        const newFamilyUser = await db.getFamilyUserByEmail(input.familyEmail);
-        if (!newFamilyUser) throw new Error("Falha ao criar usuário da família");
-        familyUserId = newFamilyUser.id;
+      // Determine who is creating the memorial
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        // Funeral home creating memorial
+        funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        // Don't set familyUserId yet - will be assigned when family claims it
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        // Family user creating memorial
+        familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        // No funeral home associated
+        funeralHomeId = null;
       } else {
-        familyUserId = familyUser.id;
+        throw new Error("Tipo de usuário não suportado");
       }
 
-      const slug = generateSlug(input.fullName);
-      await dbInstance.insert(memorials).values({
-        slug,
+      // Insert with temporary slug first
+      const tempSlug = generateSlug(input.fullName);
+      const [insertResult] = await dbInstance.insert(memorials).values({
+        slug: tempSlug,
         fullName: input.fullName,
         birthDate: input.birthDate,
         deathDate: input.deathDate,
         birthplace: input.birthplace,
-        funeralHomeId: input.funeralHomeId,
+        funeralHomeId,
         familyUserId,
         status: "pending_data",
         visibility: "public",
-      });
+        isHistorical: false, // Regular memorials are not historical
+      }).returning({ id: memorials.id });
 
-      const createdMemorial = await db.getMemorialBySlug(slug);
-      return { id: createdMemorial?.id, slug, familyUserId };
+      const memorialId = insertResult?.id;
+      if (!memorialId) throw new Error("Falha ao criar memorial");
+
+      // Update with proper slug that includes the ID
+      const finalSlug = generateSlug(input.fullName, memorialId, false);
+      await dbInstance.update(memorials)
+        .set({ slug: finalSlug })
+        .where(eq(memorials.id, memorialId));
+
+      return { id: memorialId, slug: finalSlug, familyUserId };
     }),
 
   // Update memorial
@@ -515,12 +542,47 @@ const photoRouter = router({
 
 // Dedication Router
 const dedicationRouter = router({
+  // Public: only get approved dedications
   getByMemorial: publicProcedure
     .input(z.object({ memorialId: z.number() }))
     .query(async ({ input }) => {
-      return db.getDedicationsByMemorialId(input.memorialId);
+      const dbInstance = await getDb();
+      if (!dbInstance) return [];
+
+      // Only return approved dedications for public view
+      return dbInstance
+        .select()
+        .from(dedications)
+        .where(
+          and(
+            eq(dedications.memorialId, input.memorialId),
+            eq(dedications.status, "approved")
+          )
+        )
+        .orderBy(desc(dedications.createdAt));
     }),
 
+  // Protected: get pending dedications for review (family/admin only)
+  getPending: protectedProcedure
+    .input(z.object({ memorialId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) return [];
+
+      // Get pending dedications for this memorial
+      return dbInstance
+        .select()
+        .from(dedications)
+        .where(
+          and(
+            eq(dedications.memorialId, input.memorialId),
+            eq(dedications.status, "pending")
+          )
+        )
+        .orderBy(desc(dedications.createdAt));
+    }),
+
+  // Public: create new dedication (starts as pending)
   create: publicProcedure
     .input(z.object({
       memorialId: z.number(),
@@ -531,7 +593,65 @@ const dedicationRouter = router({
       const dbInstance = await getDb();
       if (!dbInstance) throw new Error("Banco de dados não disponível");
 
+      // New dedications start as "pending" (default in schema)
       await dbInstance.insert(dedications).values(input);
+      return {
+        success: true,
+        message: "Homenagem enviada! Ela será exibida após aprovação da família."
+      };
+    }),
+
+  // Protected: approve dedication
+  approve: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      // Get user ID for reviewedBy field
+      let reviewerId = 0;
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        reviewerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        reviewerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      }
+
+      await dbInstance
+        .update(dedications)
+        .set({
+          status: "approved",
+          reviewedBy: reviewerId,
+          reviewedAt: new Date(),
+        })
+        .where(eq(dedications.id, input.id));
+
+      return { success: true };
+    }),
+
+  // Protected: reject dedication
+  reject: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      // Get user ID for reviewedBy field
+      let reviewerId = 0;
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        reviewerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        reviewerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      }
+
+      await dbInstance
+        .update(dedications)
+        .set({
+          status: "rejected",
+          reviewedBy: reviewerId,
+          reviewedAt: new Date(),
+        })
+        .where(eq(dedications.id, input.id));
+
       return { success: true };
     }),
 });

@@ -10,7 +10,8 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import {
   ArrowLeft, Save, User, Users, Image, MessageSquare,
-  Plus, Trash2, Edit3, Calendar, MapPin, Heart, Upload, Loader2
+  Plus, Trash2, Edit3, Calendar, MapPin, Heart, Upload, Loader2, Video,
+  CheckCircle, XCircle, AlertCircle
 } from "lucide-react";
 
 export default function MemorialEditPage() {
@@ -31,12 +32,18 @@ export default function MemorialEditPage() {
     birthplace: "",
     filiation: "",
     biography: "",
+    videoUrl: "",
+    visibility: "public" as "public" | "private",
   });
 
   const [descendantForm, setDescendantForm] = useState({
     name: "",
     relationship: "",
   });
+
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoCaption, setPhotoCaption] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (memorial) {
@@ -47,47 +54,104 @@ export default function MemorialEditPage() {
         birthplace: memorial.birthplace || "",
         filiation: memorial.filiation || "",
         biography: memorial.biography || "",
+        videoUrl: memorial.videoUrl || "",
+        visibility: memorial.visibility || "public",
       });
     }
   }, [memorial]);
 
+  // Mutations
+  const updateMemorialMutation = api.memorial.update.useMutation();
+  const createDescendantMutation = api.descendant.create.useMutation();
+  const createPhotoMutation = api.photo.create.useMutation();
+  const approveDedicationMutation = api.dedication.approve.useMutation();
+  const rejectDedicationMutation = api.dedication.reject.useMutation();
+
+  // Fetch pending dedications
+  const { data: pendingDedications, refetch: refetchPending } = api.dedication.getPending.useQuery(
+    { memorialId: memorial?.id || 0 },
+    { enabled: !!memorial?.id }
+  );
+
   const handleSave = async () => {
+    if (!memorial) return;
+
     setIsSaving(true);
     try {
-      // TODO: Implement memorial update API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await updateMemorialMutation.mutateAsync({
+        id: memorial.id,
+        fullName: formData.fullName,
+        birthDate: formData.birthDate || undefined,
+        deathDate: formData.deathDate || undefined,
+        birthplace: formData.birthplace || undefined,
+        filiation: formData.filiation || undefined,
+        biography: formData.biography || undefined,
+        visibility: formData.visibility,
+      });
       toast.success("Memorial atualizado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao atualizar memorial.");
+    } catch (error: any) {
+      console.error("Update error:", error);
+      toast.error(error.message || "Erro ao atualizar memorial.");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleAddDescendant = async () => {
+    if (!memorial) return;
     if (!descendantForm.name || !descendantForm.relationship) {
       toast.error("Preencha todos os campos.");
       return;
     }
     try {
-      // TODO: Implement add descendant API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await createDescendantMutation.mutateAsync({
+        memorialId: memorial.id,
+        name: descendantForm.name,
+        relationship: descendantForm.relationship,
+      });
       toast.success("Familiar adicionado com sucesso!");
       setShowAddDescendant(false);
       setDescendantForm({ name: "", relationship: "" });
-    } catch (error) {
-      toast.error("Erro ao adicionar familiar.");
+    } catch (error: any) {
+      console.error("Add descendant error:", error);
+      toast.error(error.message || "Erro ao adicionar familiar.");
+    }
+  };
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
     }
   };
 
   const handleAddPhoto = async () => {
+    if (!memorial || !photoFile) {
+      toast.error("Selecione uma foto.");
+      return;
+    }
+
+    setUploadingPhoto(true);
     try {
-      // TODO: Implement add photo API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // TODO: Implement actual S3 upload
+      // For now, use placeholder URL
+      const photoUrl = URL.createObjectURL(photoFile);
+
+      await createPhotoMutation.mutateAsync({
+        memorialId: memorial.id,
+        fileUrl: photoUrl,
+        caption: photoCaption || undefined,
+      });
+
       toast.success("Foto adicionada com sucesso!");
       setShowAddPhoto(false);
-    } catch (error) {
-      toast.error("Erro ao adicionar foto.");
+      setPhotoFile(null);
+      setPhotoCaption("");
+    } catch (error: any) {
+      console.error("Add photo error:", error);
+      toast.error(error.message || "Erro ao adicionar foto.");
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -272,6 +336,37 @@ export default function MemorialEditPage() {
                     placeholder="Conte a história de vida..."
                   />
                 </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Link do Vídeo (YouTube ou Vimeo)</label>
+                  <input
+                    type="url"
+                    value={formData.videoUrl}
+                    onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                    className="input-modern"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Cole o link completo do vídeo do YouTube ou Vimeo</p>
+                  {formData.videoUrl && (
+                    <div className="mt-4 aspect-video rounded-xl overflow-hidden border border-gray-200">
+                      <iframe
+                        src={formData.videoUrl.replace("watch?v=", "embed/")}
+                        className="w-full h-full"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                  )}
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Visibilidade</label>
+                  <select
+                    value={formData.visibility}
+                    onChange={(e) => setFormData({ ...formData, visibility: e.target.value as "public" | "private" })}
+                    className="input-modern"
+                  >
+                    <option value="public">Público - Qualquer pessoa pode ver</option>
+                    <option value="private">Privado - Apenas familiares convidados</option>
+                  </select>
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -383,17 +478,52 @@ export default function MemorialEditPage() {
                       <DialogDescription>Faça upload de uma nova foto para o memorial</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-teal-500 transition-colors cursor-pointer">
-                        <Upload className="w-10 h-10 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-2">Arraste uma foto ou clique para selecionar</p>
-                        <p className="text-sm text-gray-400">PNG, JPG até 10MB</p>
-                      </div>
+                      <label className="block cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoFileChange}
+                          className="hidden"
+                        />
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-teal-500 transition-colors">
+                          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-600 mb-2">
+                            {photoFile ? photoFile.name : "Arraste uma foto ou clique para selecionar"}
+                          </p>
+                          <p className="text-sm text-gray-400">PNG, JPG até 10MB</p>
+                        </div>
+                      </label>
+                      {photoFile && (
+                        <div className="aspect-video rounded-xl overflow-hidden border border-gray-200">
+                          <img
+                            src={URL.createObjectURL(photoFile)}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Legenda</label>
-                        <input className="input-modern" placeholder="Descreva a foto..." />
+                        <input
+                          value={photoCaption}
+                          onChange={(e) => setPhotoCaption(e.target.value)}
+                          className="input-modern"
+                          placeholder="Descreva a foto..."
+                        />
                       </div>
-                      <Button onClick={handleAddPhoto} className="w-full btn-primary">
-                        Adicionar Foto
+                      <Button
+                        onClick={handleAddPhoto}
+                        disabled={!photoFile || uploadingPhoto}
+                        className="w-full btn-primary"
+                      >
+                        {uploadingPhoto ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          "Adicionar Foto"
+                        )}
                       </Button>
                     </div>
                   </DialogContent>
@@ -439,40 +569,131 @@ export default function MemorialEditPage() {
 
           {/* Dedications Tab */}
           <TabsContent value="dedications">
-            <div className="card-modern p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Dedicações Recebidas</h3>
-              <div className="space-y-4">
-                {(memorial as any).dedications && (memorial as any).dedications.length > 0 ? (
-                  (memorial as any).dedications.map((dedication: any, index: number) => (
-                    <div
-                      key={dedication.id}
-                      className="p-5 bg-gray-50 rounded-xl fade-in"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <div className="flex items-start gap-4">
-                        <img
-                          src={dedication.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(dedication.authorName)}&background=0F766E&color=fff&size=48`}
-                          alt={dedication.authorName}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="font-medium text-gray-900">{dedication.authorName}</p>
-                              <p className="text-sm text-gray-500">{formatDate(dedication.createdAt)}</p>
-                            </div>
-                            <Heart className="w-5 h-5 text-rose-400" />
+            <div className="space-y-6">
+              {/* Pending Dedications */}
+              {pendingDedications && pendingDedications.length > 0 && (
+                <div className="card-modern p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Homenagens Pendentes ({pendingDedications.length})
+                    </h3>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Revise e aprove as homenagens antes que elas sejam exibidas publicamente.
+                  </p>
+                  <div className="space-y-4">
+                    {pendingDedications.map((dedication: any, index: number) => (
+                      <div
+                        key={dedication.id}
+                        className="p-5 bg-amber-50 border border-amber-100 rounded-xl fade-in"
+                        style={{ animationDelay: `${index * 0.1}s` }}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center flex-shrink-0">
+                            <Heart className="w-6 h-6 text-amber-600" />
                           </div>
-                          <p className="text-gray-600 leading-relaxed">{dedication.message}</p>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="font-semibold text-gray-900">{dedication.authorName}</p>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(dedication.createdAt).toLocaleDateString('pt-BR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <p className="text-gray-700 leading-relaxed mb-4">{dedication.message}</p>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={async () => {
+                                  try {
+                                    await approveDedicationMutation.mutateAsync({ id: dedication.id });
+                                    toast.success("Homenagem aprovada!");
+                                    refetchPending();
+                                  } catch (error: any) {
+                                    toast.error(error.message || "Erro ao aprovar");
+                                  }
+                                }}
+                                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Aprovar
+                              </Button>
+                              <Button
+                                onClick={async () => {
+                                  try {
+                                    await rejectDedicationMutation.mutateAsync({ id: dedication.id });
+                                    toast.success("Homenagem rejeitada");
+                                    refetchPending();
+                                  } catch (error: any) {
+                                    toast.error(error.message || "Erro ao rejeitar");
+                                  }
+                                }}
+                                variant="outline"
+                                className="border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Rejeitar
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    Nenhuma dedicação recebida ainda.
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Approved Dedications */}
+              <div className="card-modern p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">Homenagens Aprovadas</h3>
+                <div className="space-y-4">
+                  {(memorial as any).dedications && (memorial as any).dedications.length > 0 ? (
+                    (memorial as any).dedications.map((dedication: any, index: number) => (
+                      <div
+                        key={dedication.id}
+                        className="p-5 bg-gradient-to-br from-white to-gray-50 border border-gray-100 rounded-xl fade-in"
+                        style={{ animationDelay: `${index * 0.1}s` }}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center flex-shrink-0">
+                            <Heart className="w-6 h-6 text-rose-600" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <p className="font-semibold text-gray-900">{dedication.authorName}</p>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(dedication.createdAt).toLocaleDateString('pt-BR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                                <CheckCircle className="w-3 h-3" />
+                                Aprovada
+                              </span>
+                            </div>
+                            <p className="text-gray-700 leading-relaxed">{dedication.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12">
+                      <Heart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">Nenhuma homenagem aprovada ainda.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </TabsContent>

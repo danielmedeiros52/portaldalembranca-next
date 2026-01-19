@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  QrCode, Heart, Calendar, MapPin, Users, Image,
+  QrCode, Heart, Calendar, MapPin, Users, Image as ImageIcon,
   MessageSquare, Share2, ArrowLeft, Send, Download,
-  FileText, BookOpen, Newspaper, Video, Building2, GraduationCap, ExternalLink, Landmark, Star
+  Landmark, Star, Play, ChevronLeft, ChevronRight, X
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useParams } from "next/navigation";
@@ -23,6 +23,7 @@ export default function PublicMemorialPage() {
   const [showDedicationDialog, setShowDedicationDialog] = useState(false);
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   const [dedicationForm, setDedicationForm] = useState({
     authorName: "",
@@ -32,10 +33,27 @@ export default function PublicMemorialPage() {
   // Fetch memorial data
   const { data: memorial, isLoading } = api.memorial.getBySlug.useQuery({ slug });
 
-  const handleSubmitDedication = () => {
-    toast.success("Sua dedicação foi enviada.");
-    setShowDedicationDialog(false);
-    setDedicationForm({ authorName: "", message: "" });
+  const createDedicationMutation = api.dedication.create.useMutation();
+
+  const handleSubmitDedication = async () => {
+    if (!memorial || !dedicationForm.authorName || !dedicationForm.message) {
+      toast.error("Por favor, preencha todos os campos");
+      return;
+    }
+
+    try {
+      const result = await createDedicationMutation.mutateAsync({
+        memorialId: memorial.id,
+        authorName: dedicationForm.authorName,
+        message: dedicationForm.message,
+      });
+
+      toast.success(result.message || "Homenagem enviada! Ela será exibida após aprovação da família.");
+      setShowDedicationDialog(false);
+      setDedicationForm({ authorName: "", message: "" });
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao enviar homenagem");
+    }
   };
 
   const handleShare = async () => {
@@ -66,23 +84,43 @@ export default function PublicMemorialPage() {
     return age;
   };
 
+  const getYouTubeEmbedUrl = (url: string) => {
+    if (!url) return null;
+    const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando memorial...</p>
+        </div>
       </div>
     );
   }
 
   if (!memorial) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Memorial não encontrado</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Memorial não encontrado</h2>
+          <p className="text-gray-600 mb-6">Este memorial pode ter sido removido ou o link está incorreto.</p>
+          <Button onClick={() => router.push("/")} className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white">
+            Voltar ao Início
+          </Button>
+        </div>
       </div>
     );
   }
 
   const age = memorial.birthDate && memorial.deathDate ? calculateAge(memorial.birthDate, memorial.deathDate) : null;
+  const photos = (memorial as any).photos || [];
+  const descendants = (memorial as any).descendants || [];
+  const dedications = (memorial as any).dedications || [];
+  const videoEmbedUrl = memorial.videoUrl ? getYouTubeEmbedUrl(memorial.videoUrl) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -210,39 +248,123 @@ export default function PublicMemorialPage() {
           {/* Main Column */}
           <div className="lg:col-span-2 space-y-8">
             {/* Biography */}
-            <section className="card-modern p-5 sm:p-8 fade-in">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Biografia</h2>
-              <div className="prose prose-gray max-w-none">
-                {memorial.biography?.split('\n\n').map((paragraph, index) => (
-                  <p key={index} className="text-gray-600 leading-relaxed mb-4">{paragraph}</p>
-                ))}
-              </div>
-              {memorial.filiation && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Filiação:</span> {memorial.filiation}
-                  </p>
+            {memorial.biography && (
+              <section className="card-modern p-5 sm:p-8 fade-in">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+                  <Users className="w-6 h-6 text-teal-600" />
+                  Biografia
+                </h2>
+                <div className="prose prose-gray max-w-none">
+                  {memorial.biography.split('\n\n').map((paragraph, index) => (
+                    <p key={index} className="text-gray-700 leading-relaxed mb-4 text-base">{paragraph}</p>
+                  ))}
                 </div>
-              )}
-              {memorial.isHistorical && memorial.graveLocation && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">Local de Sepultamento</p>
-                      <p className="text-gray-600">{memorial.graveLocation}</p>
+                {memorial.filiation && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-semibold text-gray-800">Filiação:</span> {memorial.filiation}
+                    </p>
+                  </div>
+                )}
+                {memorial.isHistorical && memorial.graveLocation && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 mb-1">Local de Sepultamento</p>
+                        <p className="text-gray-600">{memorial.graveLocation}</p>
+                      </div>
                     </div>
                   </div>
+                )}
+              </section>
+            )}
+
+            {/* Video Section */}
+            {videoEmbedUrl && (
+              <section className="card-modern p-5 sm:p-8 fade-in stagger-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+                  <Play className="w-6 h-6 text-purple-600" />
+                  Vídeo Memorial
+                </h2>
+                <div className="aspect-video rounded-2xl overflow-hidden bg-gray-900 shadow-xl">
+                  <iframe
+                    src={videoEmbedUrl}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
                 </div>
-              )}
-            </section>
+              </section>
+            )}
+
+            {/* Photo Gallery */}
+            {photos.length > 0 && (
+              <section className="card-modern p-5 sm:p-8 fade-in stagger-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+                  <ImageIcon className="w-6 h-6 text-blue-600" />
+                  Galeria de Fotos ({photos.length})
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                  {photos.map((photo: any, index: number) => (
+                    <button
+                      key={photo.id}
+                      onClick={() => {
+                        setSelectedPhoto(photo);
+                        setCurrentPhotoIndex(index);
+                      }}
+                      className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100 hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    >
+                      <img
+                        src={photo.fileUrl}
+                        alt={photo.caption || `Foto ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          {photo.caption && (
+                            <p className="text-white text-xs font-medium line-clamp-2">{photo.caption}</p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Descendants */}
+            {descendants.length > 0 && (
+              <section className="card-modern p-5 sm:p-8 fade-in stagger-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+                  <Users className="w-6 h-6 text-indigo-600" />
+                  Família
+                </h2>
+                <div className="space-y-3">
+                  {descendants.map((descendant: any) => (
+                    <div
+                      key={descendant.id}
+                      className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-teal-200 transition-all duration-300 hover:shadow-md"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-6 h-6 text-teal-700" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900">{descendant.name}</p>
+                        <p className="text-sm text-gray-500 capitalize">{descendant.relationship}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Dedications */}
             <section className="card-modern p-5 sm:p-8 fade-in stagger-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
                   <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-rose-500" />
-                  Homenagens
+                  Homenagens ({dedications.length})
                 </h2>
                 <Dialog open={showDedicationDialog} onOpenChange={setShowDedicationDialog}>
                   <DialogTrigger asChild>
@@ -288,12 +410,43 @@ export default function PublicMemorialPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="p-5 bg-gray-50 rounded-xl text-center">
-                  <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">
-                    Seja o primeiro a deixar uma homenagem
-                  </p>
-                </div>
+                {dedications.length === 0 ? (
+                  <div className="p-8 bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl text-center border border-rose-100">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white flex items-center justify-center shadow-sm">
+                      <Heart className="w-8 h-8 text-rose-400" />
+                    </div>
+                    <p className="text-gray-700 font-medium mb-1">
+                      Seja o primeiro a deixar uma homenagem
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Compartilhe uma lembrança especial
+                    </p>
+                  </div>
+                ) : (
+                  dedications.map((dedication: any) => (
+                    <div
+                      key={dedication.id}
+                      className="p-5 bg-gradient-to-br from-white to-gray-50 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center flex-shrink-0">
+                          <Heart className="w-5 h-5 text-rose-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{dedication.authorName}</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(dedication.createdAt).toLocaleDateString('pt-BR', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-gray-700 leading-relaxed pl-13">{dedication.message}</p>
+                    </div>
+                  ))
+                )}
               </div>
             </section>
           </div>
@@ -316,13 +469,23 @@ export default function PublicMemorialPage() {
             {/* Stats */}
             <section className="card-modern p-4 sm:p-6 fade-in stagger-5">
               <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-teal-600">0</p>
+                <div className="group hover:scale-105 transition-transform duration-300">
+                  <div className="mb-2">
+                    <ImageIcon className="w-5 h-5 mx-auto text-blue-500 mb-1" />
+                  </div>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                    {photos.length}
+                  </p>
                   <p className="text-sm text-gray-500">Fotos</p>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-rose-500">0</p>
-                  <p className="text-sm text-gray-500">Dedicações</p>
+                <div className="group hover:scale-105 transition-transform duration-300">
+                  <div className="mb-2">
+                    <Heart className="w-5 h-5 mx-auto text-rose-500 mb-1" />
+                  </div>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+                    {dedications.length}
+                  </p>
+                  <p className="text-sm text-gray-500">Homenagens</p>
                 </div>
               </div>
             </section>
@@ -358,16 +521,65 @@ export default function PublicMemorialPage() {
       {/* Photo Lightbox */}
       {selectedPhoto && (
         <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedPhoto(null)}
         >
-          <div className="relative max-w-4xl w-full">
-            <img
-              src={selectedPhoto.fileUrl}
-              alt={selectedPhoto.caption}
-              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-            />
-            <p className="text-white text-center mt-4">{selectedPhoto.caption}</p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPhoto(null);
+            }}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          {/* Previous Button */}
+          {currentPhotoIndex > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const newIndex = currentPhotoIndex - 1;
+                setCurrentPhotoIndex(newIndex);
+                setSelectedPhoto(photos[newIndex]);
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 text-white"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Next Button */}
+          {currentPhotoIndex < photos.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const newIndex = currentPhotoIndex + 1;
+                setCurrentPhotoIndex(newIndex);
+                setSelectedPhoto(photos[newIndex]);
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 text-white"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+
+          <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+              <img
+                src={selectedPhoto.fileUrl}
+                alt={selectedPhoto.caption || "Foto do memorial"}
+                className="w-full h-auto max-h-[75vh] object-contain bg-black/50"
+              />
+            </div>
+            {selectedPhoto.caption && (
+              <div className="mt-6 text-center">
+                <p className="text-white text-lg font-medium">{selectedPhoto.caption}</p>
+                <p className="text-white/60 text-sm mt-2">
+                  {currentPhotoIndex + 1} / {photos.length}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
