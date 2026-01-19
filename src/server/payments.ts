@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { getDb } from "./db";
 import { paymentTransactions, subscriptions } from "../../drizzle/schema";
 import type { InsertPaymentTransaction, InsertSubscription } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 if (!env.STRIPE_SECRET_KEY) {
   throw new Error("STRIPE_SECRET_KEY is not defined in environment variables");
@@ -324,8 +324,7 @@ export async function getUserSubscriptions(userId: number, userType: "funeral_ho
     return await db
       .select()
       .from(subscriptions)
-      .where(eq(subscriptions.userId, userId))
-      .where(eq(subscriptions.userType, userType));
+      .where(and(eq(subscriptions.userId, userId), eq(subscriptions.userType, userType)));
   } catch (error) {
     console.error("[Payment] Error getting subscriptions:", error);
     return [];
