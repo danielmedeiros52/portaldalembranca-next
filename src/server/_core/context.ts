@@ -19,17 +19,22 @@ export async function createContext(opts: {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get(COOKIE_NAME)?.value;
 
+    console.log("🍪 Context: Session cookie exists?", !!sessionCookie);
+
     if (sessionCookie) {
       const session = await sdk.verifySession(sessionCookie);
+      console.log("🔐 Context: Session verified?", !!session, session?.openId);
+
       if (session) {
         // Get user from database using openId from session
         const { getUserByOpenId } = await import("~/server/db");
         user = (await getUserByOpenId(session.openId)) ?? null;
+        console.log("👤 Context: User found?", !!user, user?.openId);
       }
     }
   } catch (error) {
     // Authentication is optional for public procedures
-    console.warn("[tRPC Context] Authentication failed:", error);
+    console.error("❌ [tRPC Context] Authentication failed:", error);
     user = null;
   }
 

@@ -81,26 +81,30 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
 
     // PostgreSQL upsert using onConflictDoUpdate
+    console.log("💾 Upserting user:", { openId: user.openId, name: user.name, email: user.email });
     await db.insert(users)
       .values(values)
       .onConflictDoUpdate({
         target: users.openId,
         set: updateSet,
       });
+    console.log("✅ User upserted successfully");
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    console.error("❌ [Database] Failed to upsert user:", error);
     throw error;
   }
 }
 
 export async function getUserByOpenId(openId: string) {
+  console.log("🔍 getUserByOpenId called with:", openId);
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
+    console.warn("❌ [Database] Cannot get user: database not available");
     return undefined;
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  console.log("📊 getUserByOpenId result:", result.length > 0 ? `Found user ${result[0]?.openId}` : "Not found");
 
   return result.length > 0 ? result[0] : undefined;
 }
