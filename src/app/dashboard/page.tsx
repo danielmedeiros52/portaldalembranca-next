@@ -228,18 +228,20 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
-                <MessageSquare className="w-7 h-7 text-gray-700" />
+                <QrCode className="w-7 h-7 text-gray-700" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-900">0</p>
-                <p className="text-sm text-gray-600">Dedicações</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {subscriptionStatus?.memorialCredits ?? '-'}
+                </p>
+                <p className="text-sm text-gray-600">Créditos Disponíveis</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Memorial Credits Banner */}
-        {subscriptionStatus && subscriptionStatus.memorialCredits !== null && (
+        {subscriptionStatus && subscriptionStatus.memorialCredits !== null && subscriptionStatus.memorialCredits !== undefined && (
           <div className={`border rounded-2xl p-6 shadow-sm mb-8 ${subscriptionStatus.memorialCredits === 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
             <div className="flex items-start gap-4">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${subscriptionStatus.memorialCredits === 0 ? 'bg-amber-100' : 'bg-green-100'}`}>
