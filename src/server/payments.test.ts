@@ -1,90 +1,310 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as paymentsModule from '~/server/payments';
 
-describe('Payment Service - Stripe Integration', () => {
+// Mock Mercado Pago SDK
+vi.mock('mercadopago', () => ({
+  MercadoPagoConfig: vi.fn(),
+  Payment: vi.fn(() => ({
+    create: vi.fn((data) => {
+      const isPixPayment = data.body.payment_method_id === 'pix';
+      const mockPaymentId = Math.floor(Math.random() * 1000000);
+
+      return Promise.resolve({
+        id: mockPaymentId,
+        status: 'approved',
+        status_detail: 'accredited',
+        transaction_amount: data.body.transaction_amount,
+        currency_id: 'BRL',
+        payment_method_id: data.body.payment_method_id,
+        ...(isPixPayment && {
+          point_of_interaction: {
+            transaction_data: {
+              qr_code: '00020126580014br.gov.bcb.pix0136a629532e-7693-4846-852d-1bbff6b2f8cd520400005303986540519.905802BR5913Test User6009SAO PAULO62070503***63041D3D',
+              qr_code_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            },
+          },
+          date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        }),
+      });
+    }),
+    get: vi.fn(({ id }) => {
+      return Promise.resolve({
+        id,
+        status: 'approved',
+        status_detail: 'accredited',
+        transaction_amount: 19.90,
+        currency_id: 'BRL',
+      });
+    }),
+  })),
+}));
+
+describe('Payment Service - Mercado Pago Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('createPaymentIntent', () => {
-    it('should create a payment intent for essencial plan', async () => {
-      const result = await paymentsModule.createPaymentIntent('essencial', 'user@example.com');
+  describe('createCardPayment', () => {
+    it('should create a card payment for essencial plan', async () => {
+      const result = await paymentsModule.createCardPayment(
+        'essencial',
+        'card_token_test_123',
+        'user@example.com',
+        'visa',
+        1
+      );
 
       expect(result.id).toBeDefined();
-      expect(result.id).toMatch(/^pi_test_/);
-      expect(result.amount).toBe(1990);
-      expect(result.currency).toBe('brl');
+      expect(result.status).toBe('approved');
+      expect(result.amount).toBe(19.90);
+      expect(result.currency).toBe('BRL');
+      expect(result.paymentMethodId).toBe('visa');
     });
 
-    it('should create a payment intent for premium plan', async () => {
-      const result = await paymentsModule.createPaymentIntent('premium', 'user@example.com');
+    it('should create a card payment for premium plan', async () => {
+      const result = await paymentsModule.createCardPayment(
+        'premium',
+        'card_token_test_456',
+        'user@example.com',
+        'master',
+        1
+      );
 
       expect(result.id).toBeDefined();
-      expect(result.amount).toBe(9990);
-      expect(result.currency).toBe('brl');
+      expect(result.amount).toBe(99.90);
+      expect(result.currency).toBe('BRL');
     });
 
-    it('should create a payment intent for familia plan', async () => {
-      const result = await paymentsModule.createPaymentIntent('familia', 'user@example.com');
+    it('should create a card payment for familia plan', async () => {
+      const result = await paymentsModule.createCardPayment(
+        'familia',
+        'card_token_test_789',
+        'user@example.com',
+        'visa',
+        1
+      );
 
       expect(result.id).toBeDefined();
-      expect(result.amount).toBe(24990);
-      expect(result.currency).toBe('brl');
+      expect(result.amount).toBe(249.90);
+      expect(result.currency).toBe('BRL');
+    });
+
+    it('should support installments', async () => {
+      const result = await paymentsModule.createCardPayment(
+        'premium',
+        'card_token_test_installments',
+        'user@example.com',
+        'visa',
+        3
+      );
+
+      expect(result.id).toBeDefined();
+      expect(result.status).toBe('approved');
     });
 
     it('should throw error for invalid plan', async () => {
       await expect(
-        paymentsModule.createPaymentIntent('invalid_plan', 'user@example.com')
+        paymentsModule.createCardPayment(
+          'invalid_plan',
+          'card_token_test',
+          'user@example.com',
+          'visa',
+          1
+        )
       ).rejects.toThrow('Plan invalid_plan not found');
     });
   });
 
-  describe('getPaymentIntentStatus', () => {
-    it('should get payment intent status', async () => {
-      const result = await paymentsModule.getPaymentIntentStatus('pi_test_123');
+  describe('createPixPayment', () => {
+    it('should create a PIX payment for essencial plan', async () => {
+      const result = await paymentsModule.createPixPayment(
+        'essencial',
+        'user@example.com',
+        'João',
+        'Silva',
+        '12345678909'
+      );
 
-      expect(result.id).toBe('pi_test_123');
-      expect(result.status).toBeDefined();
-      expect(result.amount).toBeDefined();
-      expect(result.currency).toBe('brl');
+      expect(result.id).toBeDefined();
+      expect(result.status).toBe('approved');
+      expect(result.amount).toBe(19.90);
+      expect(result.currency).toBe('BRL');
+      expect(result.pixQrCode).toBeDefined();
+      expect(result.pixQrCodeBase64).toBeDefined();
+      expect(result.pixExpirationDate).toBeDefined();
     });
 
-    it('should handle payment intent requiring payment method', async () => {
-      const result = await paymentsModule.getPaymentIntentStatus('pi_test_456');
+    it('should create a PIX payment for premium plan', async () => {
+      const result = await paymentsModule.createPixPayment(
+        'premium',
+        'premium@example.com',
+        'Maria',
+        'Santos',
+        '98765432100'
+      );
 
-      expect(result.status).toBeDefined();
       expect(result.id).toBeDefined();
+      expect(result.amount).toBe(99.90);
+      expect(result.pixQrCode).toBeTruthy();
+      expect(result.pixQrCodeBase64).toBeTruthy();
+    });
+
+    it('should create a PIX payment for familia plan', async () => {
+      const result = await paymentsModule.createPixPayment(
+        'familia',
+        'familia@example.com',
+        'Carlos',
+        'Oliveira',
+        '11122233344'
+      );
+
+      expect(result.id).toBeDefined();
+      expect(result.amount).toBe(249.90);
+    });
+
+    it('should throw error for invalid plan', async () => {
+      await expect(
+        paymentsModule.createPixPayment(
+          'invalid_plan',
+          'user@example.com',
+          'João',
+          'Silva',
+          '12345678909'
+        )
+      ).rejects.toThrow('Plan invalid_plan not found');
+    });
+
+    it('should include PIX QR code data', async () => {
+      const result = await paymentsModule.createPixPayment(
+        'essencial',
+        'qrcode@example.com',
+        'Test',
+        'User',
+        '12345678909'
+      );
+
+      expect(result.pixQrCode).toBeDefined();
+      expect(typeof result.pixQrCode).toBe('string');
+      expect(result.pixQrCode.length).toBeGreaterThan(0);
+
+      expect(result.pixQrCodeBase64).toBeDefined();
+      expect(typeof result.pixQrCodeBase64).toBe('string');
+      expect(result.pixQrCodeBase64.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('getPaymentStatus', () => {
+    it('should get payment status from Mercado Pago', async () => {
+      const result = await paymentsModule.getPaymentStatus('123456');
+
+      expect(result.id).toBe('123456');
+      expect(result.status).toBeDefined();
+      expect(result.amount).toBeDefined();
+      expect(result.currency).toBe('BRL');
+    });
+
+    it('should return payment details', async () => {
+      const result = await paymentsModule.getPaymentStatus('789012');
+
+      expect(result.status).toBe('approved');
+      expect(result.statusDetail).toBe('accredited');
     });
   });
 
   describe('Plan Pricing', () => {
     it('essencial plan should cost R$ 19.90', async () => {
-      const result = await paymentsModule.createPaymentIntent('essencial', 'user@example.com');
-      expect(result.amount).toBe(1990); // 19.90 in cents
+      const result = await paymentsModule.createCardPayment(
+        'essencial',
+        'token',
+        'user@example.com',
+        'visa',
+        1
+      );
+      expect(result.amount).toBe(19.90);
     });
 
     it('premium plan should cost R$ 99.90', async () => {
-      const result = await paymentsModule.createPaymentIntent('premium', 'user@example.com');
-      expect(result.amount).toBe(9990); // 99.90 in cents
+      const result = await paymentsModule.createCardPayment(
+        'premium',
+        'token',
+        'user@example.com',
+        'visa',
+        1
+      );
+      expect(result.amount).toBe(99.90);
     });
 
     it('familia plan should cost R$ 249.90', async () => {
-      const result = await paymentsModule.createPaymentIntent('familia', 'user@example.com');
-      expect(result.amount).toBe(24990); // 249.90 in cents
+      const result = await paymentsModule.createCardPayment(
+        'familia',
+        'token',
+        'user@example.com',
+        'visa',
+        1
+      );
+      expect(result.amount).toBe(249.90);
+    });
+  });
+
+  describe('getPlanDetails', () => {
+    it('should return details for essencial plan', () => {
+      const plan = paymentsModule.getPlanDetails('essencial');
+      expect(plan).toBeDefined();
+      expect(plan?.name).toBe('Memorial Essencial');
+      expect(plan?.price).toBe(1990);
+      expect(plan?.description).toContain('10 fotos');
+    });
+
+    it('should return details for premium plan', () => {
+      const plan = paymentsModule.getPlanDetails('premium');
+      expect(plan).toBeDefined();
+      expect(plan?.name).toBe('Memorial Premium');
+      expect(plan?.price).toBe(9990);
+      expect(plan?.description).toContain('ilimitada');
+    });
+
+    it('should return details for familia plan', () => {
+      const plan = paymentsModule.getPlanDetails('familia');
+      expect(plan).toBeDefined();
+      expect(plan?.name).toBe('Plano Família');
+      expect(plan?.price).toBe(24990);
+      expect(plan?.description).toContain('5 memoriais');
+    });
+
+    it('should return null for invalid plan', () => {
+      const plan = paymentsModule.getPlanDetails('invalid');
+      expect(plan).toBeNull();
     });
   });
 
   describe('Currency Handling', () => {
-    it('should always use BRL currency', async () => {
-      const result = await paymentsModule.createPaymentIntent('essencial', 'user@example.com');
-      expect(result.currency).toBe('brl');
+    it('should always use BRL currency for card payments', async () => {
+      const result = await paymentsModule.createCardPayment(
+        'essencial',
+        'token',
+        'user@example.com',
+        'visa',
+        1
+      );
+      expect(result.currency).toBe('BRL');
+    });
+
+    it('should always use BRL currency for PIX payments', async () => {
+      const result = await paymentsModule.createPixPayment(
+        'essencial',
+        'user@example.com',
+        'João',
+        'Silva',
+        '12345678909'
+      );
+      expect(result.currency).toBe('BRL');
     });
   });
 
   describe('Payment Transaction Tracking', () => {
     it('should create a payment transaction record', async () => {
       const transactionData = {
-        stripePaymentIntentId: 'pi_test_tracking_123',
+        mpPaymentId: 'mp_test_tracking_123',
         amount: 1990,
         currency: 'brl',
         status: 'pending' as const,
@@ -101,9 +321,32 @@ describe('Payment Service - Stripe Integration', () => {
       expect(transactionId).toBeGreaterThan(0);
     });
 
+    it('should create PIX transaction with QR code data', async () => {
+      const transactionData = {
+        mpPaymentId: 'mp_test_pix_123',
+        amount: 1990,
+        currency: 'brl',
+        status: 'pending' as const,
+        paymentMethod: 'pix' as const,
+        customerEmail: 'pix@example.com',
+        planId: 'essencial',
+        pixQrCode: '00020126580014br.gov.bcb.pix...',
+        pixQrCodeBase64: 'iVBORw0KGgoAAAANSUhEUg...',
+        pixExpirationDate: new Date(Date.now() + 30 * 60 * 1000),
+      };
+
+      const transactionId = await paymentsModule.createPaymentTransaction(transactionData);
+      expect(transactionId).toBeDefined();
+
+      const transaction = await paymentsModule.getPaymentTransaction('mp_test_pix_123');
+      expect(transaction?.pixQrCode).toBeDefined();
+      expect(transaction?.pixQrCodeBase64).toBeDefined();
+      expect(transaction?.pixExpirationDate).toBeDefined();
+    });
+
     it('should update payment transaction status', async () => {
       const transactionData = {
-        stripePaymentIntentId: 'pi_test_update_123',
+        mpPaymentId: 'mp_test_update_123',
         amount: 1990,
         currency: 'brl',
         status: 'pending' as const,
@@ -116,17 +359,17 @@ describe('Payment Service - Stripe Integration', () => {
 
       // Update to succeeded
       await expect(
-        paymentsModule.updatePaymentTransactionStatus('pi_test_update_123', 'succeeded')
+        paymentsModule.updatePaymentTransactionStatus('mp_test_update_123', 'succeeded')
       ).resolves.not.toThrow();
 
       // Verify the update by retrieving
-      const transaction = await paymentsModule.getPaymentTransaction('pi_test_update_123');
+      const transaction = await paymentsModule.getPaymentTransaction('mp_test_update_123');
       expect(transaction?.status).toBe('succeeded');
     });
 
     it('should update payment transaction with failure reason', async () => {
       const transactionData = {
-        stripePaymentIntentId: 'pi_test_failed_123',
+        mpPaymentId: 'mp_test_failed_123',
         amount: 1990,
         currency: 'brl',
         status: 'pending' as const,
@@ -139,19 +382,19 @@ describe('Payment Service - Stripe Integration', () => {
 
       // Update to failed with reason
       await paymentsModule.updatePaymentTransactionStatus(
-        'pi_test_failed_123',
+        'mp_test_failed_123',
         'failed',
-        'Insufficient funds'
+        'cc_rejected_insufficient_amount'
       );
 
-      const transaction = await paymentsModule.getPaymentTransaction('pi_test_failed_123');
+      const transaction = await paymentsModule.getPaymentTransaction('mp_test_failed_123');
       expect(transaction?.status).toBe('failed');
-      expect(transaction?.failureReason).toBe('Insufficient funds');
+      expect(transaction?.failureReason).toBe('cc_rejected_insufficient_amount');
     });
 
-    it('should retrieve payment transaction by payment intent ID', async () => {
+    it('should retrieve payment transaction by Mercado Pago payment ID', async () => {
       const transactionData = {
-        stripePaymentIntentId: 'pi_test_retrieve_123',
+        mpPaymentId: 'mp_test_retrieve_123',
         amount: 9990,
         currency: 'brl',
         status: 'succeeded' as const,
@@ -162,24 +405,24 @@ describe('Payment Service - Stripe Integration', () => {
 
       const createdId = await paymentsModule.createPaymentTransaction(transactionData);
 
-      const retrieved = await paymentsModule.getPaymentTransaction('pi_test_retrieve_123');
+      const retrieved = await paymentsModule.getPaymentTransaction('mp_test_retrieve_123');
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.id).toBe(createdId);
-      expect(retrieved?.stripePaymentIntentId).toBe('pi_test_retrieve_123');
+      expect(retrieved?.mpPaymentId).toBe('mp_test_retrieve_123');
       expect(retrieved?.amount).toBe(9990);
       expect(retrieved?.planId).toBe('premium');
     });
 
     it('should return null for non-existent payment transaction', async () => {
-      const transaction = await paymentsModule.getPaymentTransaction('pi_test_nonexistent');
+      const transaction = await paymentsModule.getPaymentTransaction('mp_test_nonexistent');
       expect(transaction).toBeNull();
     });
 
     it('should store payment transaction metadata as JSON string', async () => {
       const metadata = { orderId: '12345', campaignId: 'summer2024' };
       const transactionData = {
-        stripePaymentIntentId: 'pi_test_metadata_123',
+        mpPaymentId: 'mp_test_metadata_123',
         amount: 1990,
         currency: 'brl',
         status: 'pending' as const,
@@ -191,7 +434,7 @@ describe('Payment Service - Stripe Integration', () => {
 
       await paymentsModule.createPaymentTransaction(transactionData);
 
-      const transaction = await paymentsModule.getPaymentTransaction('pi_test_metadata_123');
+      const transaction = await paymentsModule.getPaymentTransaction('mp_test_metadata_123');
       expect(transaction?.metadata).toBeDefined();
       expect(JSON.parse(transaction!.metadata!)).toEqual(metadata);
     });
@@ -215,13 +458,13 @@ describe('Payment Service - Stripe Integration', () => {
       expect(subscriptionId).toBeGreaterThan(0);
     });
 
-    it('should create subscription with Stripe customer and subscription IDs', async () => {
+    it('should create subscription with Mercado Pago customer and subscription IDs', async () => {
       const subscriptionData = {
         userId: 2,
         userType: 'funeral_home' as const,
         planId: 'familia',
-        stripeCustomerId: 'cus_test123',
-        stripeSubscriptionId: 'sub_test123',
+        mpCustomerId: 'mp_cus_test123',
+        mpSubscriptionId: 'mp_sub_test123',
         status: 'active' as const,
         currentPeriodStart: new Date(),
         currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
@@ -315,36 +558,73 @@ describe('Payment Service - Stripe Integration', () => {
   });
 
   describe('Payment Flow Integration', () => {
-    it('should create payment intent and transaction together', async () => {
+    it('should create card payment and transaction together', async () => {
       const planId = 'premium';
       const customerEmail = 'integration@example.com';
 
-      // Create payment intent (which now also creates transaction)
-      const paymentIntent = await paymentsModule.createPaymentIntent(planId, customerEmail);
+      // Create card payment (which now also creates transaction)
+      const payment = await paymentsModule.createCardPayment(
+        planId,
+        'card_token_integration',
+        customerEmail,
+        'visa',
+        1
+      );
 
-      expect(paymentIntent.id).toBeDefined();
+      expect(payment.id).toBeDefined();
 
       // Verify transaction was created
-      const transaction = await paymentsModule.getPaymentTransaction(paymentIntent.id);
+      const transaction = await paymentsModule.getPaymentTransaction(payment.id);
 
       expect(transaction).toBeDefined();
-      expect(transaction?.stripePaymentIntentId).toBe(paymentIntent.id);
+      expect(transaction?.mpPaymentId).toBe(payment.id);
       expect(transaction?.amount).toBe(9990);
       expect(transaction?.planId).toBe('premium');
-      expect(transaction?.status).toBe('pending');
+      expect(transaction?.status).toBe('succeeded');
+    });
+
+    it('should create PIX payment and transaction together', async () => {
+      const planId = 'essencial';
+      const customerEmail = 'pix-integration@example.com';
+
+      // Create PIX payment (which also creates transaction)
+      const payment = await paymentsModule.createPixPayment(
+        planId,
+        customerEmail,
+        'João',
+        'Silva',
+        '12345678909'
+      );
+
+      expect(payment.id).toBeDefined();
+      expect(payment.pixQrCode).toBeDefined();
+
+      // Verify transaction was created with PIX data
+      const transaction = await paymentsModule.getPaymentTransaction(payment.id);
+
+      expect(transaction).toBeDefined();
+      expect(transaction?.mpPaymentId).toBe(payment.id);
+      expect(transaction?.pixQrCode).toBeDefined();
+      expect(transaction?.pixQrCodeBase64).toBeDefined();
     });
 
     it('should update transaction status when checking payment status', async () => {
-      // Create a payment intent
-      const paymentIntent = await paymentsModule.createPaymentIntent('essencial', 'status@example.com');
+      // Create a card payment
+      const payment = await paymentsModule.createCardPayment(
+        'essencial',
+        'card_token_status',
+        'status@example.com',
+        'visa',
+        1
+      );
 
       // Check status (which should update database)
-      const status = await paymentsModule.getPaymentIntentStatus(paymentIntent.id);
+      const status = await paymentsModule.getPaymentStatus(payment.id);
 
-      expect(status.id).toBe(paymentIntent.id);
+      expect(status.id).toBe(payment.id);
 
       // Verify database was updated
-      const transaction = await paymentsModule.getPaymentTransaction(paymentIntent.id);
+      const transaction = await paymentsModule.getPaymentTransaction(payment.id);
       expect(transaction).toBeDefined();
       expect(transaction?.status).toBeDefined();
     });

@@ -1212,46 +1212,90 @@ const adminRouter = router({
     }),
 });
 
-// Payment Router for Stripe integration
+// Payment Router for Mercado Pago integration
 const paymentRouter = router({
-  createPaymentIntent: publicProcedure
-    .input(z.object({
-      planId: z.string(),
-      customerEmail: z.string().email().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      const { createPaymentIntent } = await import('~/server/payments');
-      return createPaymentIntent(input.planId, input.customerEmail || '');
+  // Get Mercado Pago public key for client-side SDK
+  getPublicKey: publicProcedure
+    .query(() => {
+      return { publicKey: env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "" };
     }),
 
-  confirmPayment: publicProcedure
+  // Create card payment with Mercado Pago
+  createCardPayment: publicProcedure
     .input(z.object({
-      paymentIntentId: z.string(),
-      paymentMethodId: z.string().startsWith("pm_", "Payment method ID must start with 'pm_'"),
+      planId: z.string(),
+      cardToken: z.string().min(1, "Card token is required"),
+      customerEmail: z.string().email(),
+      paymentMethodId: z.string().min(1, "Payment method ID is required"),
+      installments: z.number().int().min(1).max(12).default(1),
     }))
     .mutation(async ({ input }) => {
-      const { confirmPaymentWithPaymentMethod } = await import('~/server/payments');
-      return confirmPaymentWithPaymentMethod(
-        input.paymentIntentId,
-        input.paymentMethodId
+      const { createCardPayment } = await import('~/server/payments');
+      return createCardPayment(
+        input.planId,
+        input.cardToken,
+        input.customerEmail,
+        input.paymentMethodId,
+        input.installments
       );
     }),
 
-  getPaymentStatus: publicProcedure
+  // Create PIX payment with Mercado Pago
+  createPixPayment: publicProcedure
     .input(z.object({
-      paymentIntentId: z.string(),
+      planId: z.string(),
+      customerEmail: z.string().email(),
+      firstName: z.string().min(1, "First name is required"),
+      lastName: z.string().min(1, "Last name is required"),
+      cpf: z.string().regex(/^\d{11}$/, "CPF must be 11 digits"),
     }))
     .mutation(async ({ input }) => {
-      const { getPaymentIntentStatus } = await import('~/server/payments');
-      return getPaymentIntentStatus(input.paymentIntentId);
+      const { createPixPayment } = await import('~/server/payments');
+      return createPixPayment(
+        input.planId,
+        input.customerEmail,
+        input.firstName,
+        input.lastName,
+        input.cpf
+      );
+    }),
+
+  // Get payment status from Mercado Pago
+  getPaymentStatus: publicProcedure
+    .input(z.object({
+      paymentId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const { getPaymentStatus } = await import('~/server/payments');
+      return getPaymentStatus(input.paymentId);
+    }),
+
+  // Get payment transaction from database
+  getPaymentTransaction: protectedProcedure
+    .input(z.object({
+      paymentId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const { getPaymentTransaction } = await import('~/server/payments');
+      return getPaymentTransaction(input.paymentId);
+    }),
+
+  // Get plan details
+  getPlanDetails: publicProcedure
+    .input(z.object({
+      planId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const { getPlanDetails } = await import('~/server/payments');
+      return getPlanDetails(input.planId);
     }),
 
   // Subscription management
   createSubscription: protectedProcedure
     .input(z.object({
       planId: z.string(),
-      stripeCustomerId: z.string().optional(),
-      stripeSubscriptionId: z.string().optional(),
+      mpCustomerId: z.string().optional(),
+      mpSubscriptionId: z.string().optional(),
       durationMonths: z.number().positive().default(12),
       memorialId: z.number().optional(),
     }))
@@ -1281,8 +1325,8 @@ const paymentRouter = router({
         userId,
         userType,
         planId: input.planId,
-        stripeCustomerId: input.stripeCustomerId,
-        stripeSubscriptionId: input.stripeSubscriptionId,
+        mpCustomerId: input.mpCustomerId,
+        mpSubscriptionId: input.mpSubscriptionId,
         status: "active",
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
@@ -1311,15 +1355,6 @@ const paymentRouter = router({
       }
 
       return getUserSubscriptions(userId, userType);
-    }),
-
-  getPaymentTransaction: protectedProcedure
-    .input(z.object({
-      paymentIntentId: z.string(),
-    }))
-    .query(async ({ input }) => {
-      const { getPaymentTransaction } = await import('~/server/payments');
-      return getPaymentTransaction(input.paymentIntentId);
     }),
 
   cancelSubscription: protectedProcedure

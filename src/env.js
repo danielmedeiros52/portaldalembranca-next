@@ -14,7 +14,7 @@ export const env = createEnv({
     JWT_SECRET: z.string().min(32),
     OAUTH_SERVER_URL: z.string().url().optional(),
     OWNER_OPEN_ID: z.string().optional(),
-    STRIPE_SECRET_KEY: z.string().optional(),
+    MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
     DEFAULT_ADMIN_EMAIL: z.string().email().optional(),
     DEFAULT_ADMIN_PASSWORD: z.string().min(6).optional(),
     DEFAULT_ADMIN_NAME: z.string().optional(),
@@ -26,7 +26,7 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+    NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: z.string().optional(),
     NEXT_PUBLIC_APP_TITLE: z.string().optional(),
     NEXT_PUBLIC_APP_ID: z.string().optional(),
     NEXT_PUBLIC_FRONTEND_FORGE_API_KEY: z.string().optional(),
@@ -43,11 +43,11 @@ export const env = createEnv({
     JWT_SECRET: process.env.JWT_SECRET,
     OAUTH_SERVER_URL: process.env.OAUTH_SERVER_URL,
     OWNER_OPEN_ID: process.env.OWNER_OPEN_ID,
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    MERCADOPAGO_ACCESS_TOKEN: process.env.MERCADOPAGO_ACCESS_TOKEN,
     DEFAULT_ADMIN_EMAIL: process.env.DEFAULT_ADMIN_EMAIL,
     DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD,
     DEFAULT_ADMIN_NAME: process.env.DEFAULT_ADMIN_NAME,
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY,
     NEXT_PUBLIC_APP_TITLE: process.env.NEXT_PUBLIC_APP_TITLE,
     NEXT_PUBLIC_APP_ID: process.env.NEXT_PUBLIC_APP_ID,
     NEXT_PUBLIC_FRONTEND_FORGE_API_KEY: process.env.NEXT_PUBLIC_FRONTEND_FORGE_API_KEY,

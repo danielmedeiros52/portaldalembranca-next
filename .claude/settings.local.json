@@ -23,7 +23,8 @@
       "Bash(taskkill:*)",
       "Bash(powershell -Command \"Stop-Process -Id 23256 -Force\")",
       "Bash(curl:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "WebSearch"
     ]
   }
 }

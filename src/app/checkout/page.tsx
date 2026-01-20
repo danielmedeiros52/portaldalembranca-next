@@ -1,27 +1,26 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import {
   ArrowLeft, CreditCard, QrCode, Check, Loader2, Shield, Lock,
-  Sparkles, Heart, Image, Users, Star
+  Sparkles, Heart, Image, Users, Star, Copy, CheckCircle2, XCircle
 } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 const APP_TITLE = "Portal da Lembrança";
 
-// Load Stripe outside of component to avoid recreating on every render
-// Use process.env directly for client-side access to NEXT_PUBLIC_ variables
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-console.log("[Checkout] Stripe publishable key configured:", !!stripePublishableKey, stripePublishableKey?.substring(0, 7) + "...");
-const stripePromise = stripePublishableKey
-  ? loadStripe(stripePublishableKey)
-  : null;
+// Declare Mercado Pago types for TypeScript
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
 
 type PaymentMethod = "card" | "pix";
 type CheckoutStep = "plan" | "payment" | "processing" | "success";
@@ -41,38 +40,88 @@ const plans = [
       "Dedicações e homenagens"
     ],
     popular: true
+  },
+  {
+    id: "premium",
+    name: "Memorial Premium",
+    price: 99.90,
+    period: "ano",
+    features: [
+      "Tudo do plano Essencial",
+      "Galeria ilimitada de fotos",
+      "Vídeos e áudios",
+      "Linha do tempo interativa",
+      "Customização avançada",
+      "Suporte prioritário"
+    ],
+    popular: false
+  },
+  {
+    id: "familia",
+    name: "Plano Família",
+    price: 249.90,
+    period: "ano",
+    features: [
+      "Tudo do plano Premium",
+      "Até 5 memoriais",
+      "Gestão compartilhada",
+      "Árvore genealógica",
+      "Backup em nuvem",
+      "Consultoria personalizada"
+    ],
+    popular: false
   }
 ];
 
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // State management
   const [step, setStep] = useState<CheckoutStep>("plan");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+
+  // Form data
   const [customerEmail, setCustomerEmail] = useState("");
-  const [cardholderName, setCardholderName] = useState("");
-  const [paymentIntentId, setPaymentIntentId] = useState<string>("");
-  const [isCardReady, setIsCardReady] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [cpf, setCpf] = useState("");
 
-  // Stripe hooks
-  const stripe = useStripe();
-  const elements = useElements();
+  // Mercado Pago state
+  const [mpInstance, setMpInstance] = useState<any>(null);
+  const [cardFormReady, setCardFormReady] = useState(false);
+  const cardFormRef = useRef<any>(null);
 
-  // Debug: Log when Stripe loads
-  useEffect(() => {
-    console.log("[Checkout] Stripe instance:", !!stripe, "Elements instance:", !!elements);
-  }, [stripe, elements]);
+  // PIX payment state
+  const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
+  const [pixQrCode, setPixQrCode] = useState<string | null>(null);
+  const [pixQrCodeBase64, setPixQrCodeBase64] = useState<string | null>(null);
+  const [pixExpirationDate, setPixExpirationDate] = useState<string | null>(null);
 
-  // tRPC mutations
-  const createPaymentMutation = api.payment.createPaymentIntent.useMutation();
-  const confirmPaymentMutation = api.payment.confirmPayment.useMutation();
-  const createSubscriptionMutation = api.payment.createSubscription.useMutation();
+  // Payment status
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
+  // tRPC mutations and queries
+  const createCardPayment = api.payment.createCardPayment.useMutation();
+  const createPixPayment = api.payment.createPixPayment.useMutation();
+  const createSubscription = api.payment.createSubscription.useMutation();
+
+  // Poll for PIX payment status (only when we have a payment ID)
+  const { data: paymentStatusData, refetch: refetchPaymentStatus } = api.payment.getPaymentStatus.useQuery(
+    { paymentId: pixPaymentId! },
+    {
+      enabled: !!pixPaymentId && paymentMethod === "pix" && step === "processing",
+      refetchInterval: 3000, // Poll every 3 seconds
+    }
+  );
 
   const planFromUrl = searchParams.get("plan");
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
 
+  // Handle plan selection from URL
   useEffect(() => {
     if (planFromUrl) {
       const urlPlan = plans.find(p => p.id === planFromUrl);
@@ -83,25 +132,174 @@ function CheckoutContent() {
       }
     }
 
-    // Auto-select the only available plan (essencial)
+    // Auto-select the essencial plan if none selected
     if (plans.length > 0 && !selectedPlanId && plans[0]) {
       setSelectedPlanId(plans[0].id);
     }
   }, [planFromUrl]);
 
-  // Check if CardElement is ready when on payment step with card method
+  // Load Mercado Pago SDK
   useEffect(() => {
-    if (step === "payment" && paymentMethod === "card" && stripe && elements) {
-      // Small delay to ensure CardElement has mounted
-      const timer = setTimeout(() => {
-        const cardElement = elements.getElement(CardElement);
-        setIsCardReady(!!cardElement);
-      }, 100);
-      return () => clearTimeout(timer);
-    } else {
-      setIsCardReady(false);
+    console.log("[Checkout] Loading Mercado Pago SDK...");
+
+    const script = document.createElement("script");
+    script.src = "https://sdk.mercadopago.com/js/v2";
+    script.async = true;
+
+    script.onload = () => {
+      console.log("[Checkout] Mercado Pago SDK loaded");
+
+      // Get public key from environment
+      const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
+
+      if (!publicKey) {
+        console.error("[Checkout] Mercado Pago public key not found");
+        toast.error("Erro ao carregar sistema de pagamento. Chave pública não configurada.");
+        return;
+      }
+
+      try {
+        const mp = new window.MercadoPago(publicKey, {
+          locale: 'pt-BR'
+        });
+        setMpInstance(mp);
+        console.log("[Checkout] Mercado Pago initialized successfully");
+      } catch (error) {
+        console.error("[Checkout] Error initializing Mercado Pago:", error);
+        toast.error("Erro ao inicializar Mercado Pago");
+      }
+    };
+
+    script.onerror = () => {
+      console.error("[Checkout] Failed to load Mercado Pago SDK");
+      toast.error("Erro ao carregar Mercado Pago. Por favor, recarregue a página.");
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  // Initialize CardForm when MP is ready and card payment is selected
+  useEffect(() => {
+    if (!mpInstance || paymentMethod !== "card" || step !== "payment") {
+      return;
     }
-  }, [step, paymentMethod, stripe, elements]);
+
+    // Wait for form elements to be in DOM
+    const initCardForm = () => {
+      const formElement = document.getElementById("form-checkout");
+      if (!formElement) {
+        console.log("[Checkout] Form element not found, retrying...");
+        setTimeout(initCardForm, 100);
+        return;
+      }
+
+      try {
+        console.log("[Checkout] Initializing CardForm...");
+
+        const cardForm = mpInstance.cardForm({
+          amount: String(selectedPlan?.price || 19.90),
+          iframe: true,
+          form: {
+            id: "form-checkout",
+            cardNumber: {
+              id: "form-checkout__cardNumber",
+              placeholder: "Número do cartão",
+            },
+            expirationDate: {
+              id: "form-checkout__expirationDate",
+              placeholder: "MM/AA",
+            },
+            securityCode: {
+              id: "form-checkout__securityCode",
+              placeholder: "CVV",
+            },
+            cardholderName: {
+              id: "form-checkout__cardholderName",
+              placeholder: "Nome impresso no cartão",
+            },
+            issuer: {
+              id: "form-checkout__issuer",
+              placeholder: "Banco emissor",
+            },
+            installments: {
+              id: "form-checkout__installments",
+              placeholder: "Parcelas",
+            },
+            identificationType: {
+              id: "form-checkout__identificationType",
+            },
+            identificationNumber: {
+              id: "form-checkout__identificationNumber",
+              placeholder: "CPF",
+            },
+            cardholderEmail: {
+              id: "form-checkout__cardholderEmail",
+              placeholder: "E-mail",
+            },
+          },
+          callbacks: {
+            onFormMounted: (error: any) => {
+              if (error) {
+                console.error("[Checkout] CardForm mount error:", error);
+                toast.error("Erro ao carregar formulário de cartão");
+                return;
+              }
+              console.log("[Checkout] CardForm mounted successfully");
+              setCardFormReady(true);
+            },
+            onSubmit: async (event: Event) => {
+              event.preventDefault();
+              await handleCardPayment(cardForm);
+            },
+          },
+        });
+
+        cardFormRef.current = cardForm;
+      } catch (error) {
+        console.error("[Checkout] Error initializing CardForm:", error);
+        toast.error("Erro ao inicializar formulário de pagamento");
+      }
+    };
+
+    // Small delay to ensure DOM is ready
+    setTimeout(initCardForm, 100);
+
+    return () => {
+      if (cardFormRef.current) {
+        cardFormRef.current = null;
+      }
+      setCardFormReady(false);
+    };
+  }, [mpInstance, paymentMethod, step, selectedPlan]);
+
+  // Monitor PIX payment status
+  useEffect(() => {
+    if (!paymentStatusData || !pixPaymentId) return;
+
+    console.log("[Checkout] PIX payment status update:", paymentStatusData.status);
+
+    if (paymentStatusData.status === "approved" || paymentStatusData.status === "authorized") {
+      // Payment approved!
+      console.log("[Checkout] PIX payment approved!");
+      handleSubscriptionCreation(pixPaymentId).then(() => {
+        setPaymentStatus("success");
+        setStep("success");
+        toast.success("Pagamento PIX confirmado!");
+      });
+    } else if (paymentStatusData.status === "rejected" || paymentStatusData.status === "cancelled") {
+      console.error("[Checkout] PIX payment rejected/cancelled");
+      setPaymentStatus("error");
+      setErrorMessage("Pagamento PIX foi rejeitado ou cancelado");
+      toast.error("Pagamento PIX foi rejeitado ou cancelado");
+      setIsLoading(false);
+    }
+  }, [paymentStatusData, pixPaymentId]);
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlanId(planId);
@@ -115,581 +313,654 @@ function CheckoutContent() {
     setStep("payment");
   };
 
-  const validatePaymentForm = (): boolean => {
-    if (!customerEmail || !customerEmail.includes("@")) {
-      toast.error("Email válido é obrigatório.");
-      return false;
-    }
-
-    if (paymentMethod === "card") {
-      if (!stripe || !elements) {
-        toast.error("Stripe não foi carregado. Recarregue a página.");
-        return false;
-      }
-
-      if (!cardholderName || cardholderName.trim().length < 3) {
-        toast.error("Nome do titular é obrigatório.");
-        return false;
-      }
-
-      // Check if CardElement is available
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        toast.error("Formulário do cartão não está carregado. Por favor, aguarde um momento e tente novamente.");
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const handleProcessPayment = async () => {
-    console.log("[Checkout] ===== Starting payment process =====");
-    console.log("[Checkout] Plan:", selectedPlanId, "Payment method:", paymentMethod);
-    console.log("[Checkout] Customer email:", customerEmail, "Cardholder name:", cardholderName);
-    console.log("[Checkout] Stripe available:", !!stripe, "Elements available:", !!elements);
-
-    if (!selectedPlanId || !validatePaymentForm()) {
-      console.error("[Checkout] Validation failed");
-      return;
-    }
-
-    // Check if PIX is selected (not yet implemented)
-    if (paymentMethod === "pix") {
-      toast.error("Pagamento via PIX ainda não está disponível. Por favor, selecione pagamento com cartão.");
-      return;
-    }
-
-    if (!stripe || !elements) {
-      console.error("[Checkout] Stripe or Elements not loaded");
-      toast.error("Stripe não foi carregado. Recarregue a página.");
-      return;
-    }
-
-    setIsLoading(true);
-
+  const handleCardPayment = async (cardForm: any) => {
     try {
-      // Step 1: Get CardElement FIRST before any state changes that might unmount it
-      const cardElement = elements.getElement(CardElement);
-      console.log("[Checkout] CardElement obtained:", !!cardElement);
-
-      if (!cardElement) {
-        console.error("[Checkout] CardElement not found. Payment method:", paymentMethod, "Stripe:", !!stripe, "Elements:", !!elements);
-        toast.error("Erro ao processar pagamento: formulário do cartão não está disponível. Por favor, recarregue a página e tente novamente.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Step 2: Create payment intent with Stripe
-      const toastId = toast.loading("Criando intenção de pagamento...");
-
-      const paymentResult = await createPaymentMutation.mutateAsync({
-        planId: selectedPlanId,
-        customerEmail,
-      });
-
-      if (!paymentResult.id) {
-        toast.error("Erro ao criar intenção de pagamento", { id: toastId });
-        setIsLoading(false);
-        return;
-      }
-
-      setPaymentIntentId(paymentResult.id);
-      toast.success("Intenção de pagamento criada", { id: toastId });
-
-      // Step 3: Create payment method using Stripe.js (client-side, secure)
-      const validatingToast = toast.loading("Validando informações do cartão...");
-
-      console.log("[Checkout] Creating payment method with Stripe.js...");
-
-      let stripePaymentMethod;
-      let pmError;
-
-      try {
-        // Add a timeout to catch if Stripe.js hangs
-        const createPaymentMethodPromise = stripe.createPaymentMethod({
-          type: "card",
-          card: cardElement,
-          billing_details: {
-            name: cardholderName,
-            email: customerEmail,
-          },
-        });
-
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout: Stripe demorou muito para responder")), 30000)
-        );
-
-        const result = await Promise.race([createPaymentMethodPromise, timeoutPromise]) as any;
-        pmError = result.error;
-        stripePaymentMethod = result.paymentMethod;
-
-        console.log("[Checkout] Stripe.createPaymentMethod result:", {
-          hasError: !!pmError,
-          hasPaymentMethod: !!stripePaymentMethod,
-          errorMessage: pmError?.message
-        });
-      } catch (error: any) {
-        console.error("[Checkout] Exception during payment method creation:", error);
-        toast.error(error.message || "Erro ao criar método de pagamento", { id: validatingToast });
-        setIsLoading(false);
-        return;
-      }
-
-      if (pmError) {
-        console.error("[Checkout] Payment method creation error:", pmError);
-        toast.error(pmError.message || "Erro ao validar cartão", { id: validatingToast });
-        setIsLoading(false);
-        return;
-      }
-
-      if (!stripePaymentMethod) {
-        console.error("[Checkout] Payment method is null");
-        toast.error("Falha ao criar método de pagamento", { id: validatingToast });
-        setIsLoading(false);
-        return;
-      }
-
-      console.log("[Checkout] Payment method created successfully:", stripePaymentMethod.id);
-      toast.success("Cartão validado!", { id: validatingToast });
-
-      // Now change step to processing since we have the payment method
+      setIsLoading(true);
+      setPaymentStatus("processing");
       setStep("processing");
 
-      // Step 4: Confirm payment with payment method ID (secure - no card data sent to backend)
-      const processingToast = toast.loading("Processando pagamento...");
+      console.log("[Checkout] Processing card payment...");
 
-      console.log("[Checkout] Confirming payment with:", {
-        paymentIntentId: paymentResult.id,
-        paymentMethodId: stripePaymentMethod.id,
+      // Get card form data
+      const cardFormData = cardForm.getCardFormData();
+
+      if (!cardFormData.token) {
+        throw new Error("Token de cartão não foi gerado");
+      }
+
+      console.log("[Checkout] Card token generated, creating payment...");
+
+      // Create payment with Mercado Pago
+      const result = await createCardPayment.mutateAsync({
+        planId: selectedPlanId!,
+        cardToken: cardFormData.token,
+        customerEmail: cardFormData.cardholderEmail || customerEmail,
+        paymentMethodId: cardFormData.paymentMethodId,
+        installments: parseInt(cardFormData.installments) || 1,
       });
 
-      const confirmResult = await confirmPaymentMutation.mutateAsync({
-        paymentIntentId: paymentResult.id,
-        paymentMethodId: stripePaymentMethod.id,
-      });
+      console.log("[Checkout] Payment result:", result);
 
-      console.log("[Checkout] Payment confirmation result:", confirmResult);
+      // Check payment status
+      if (result.status === "approved" || result.status === "authorized") {
+        console.log("[Checkout] Payment approved!");
 
-      if (confirmResult.status === "succeeded") {
-        toast.success("Pagamento processado com sucesso!", { id: processingToast });
+        // Create subscription
+        await handleSubscriptionCreation(result.id);
 
-        // Step 5: Create subscription record after successful payment
-        try {
-          const subToast = toast.loading("Criando sua assinatura...");
-
-          await createSubscriptionMutation.mutateAsync({
-            planId: selectedPlanId,
-            durationMonths: 12, // Annual subscription
-            // Optional: stripeCustomerId and stripeSubscriptionId can be added if using Stripe subscriptions
-          });
-
-          toast.success("Assinatura criada com sucesso!", { id: subToast });
-        } catch (subError: any) {
-          console.error("[Checkout] Subscription creation error:", subError);
-          // Don't fail the entire flow if subscription creation fails
-          // The payment was successful, so we still show success
-          toast.error("Aviso: Pagamento confirmado, mas houve erro ao criar assinatura. Entre em contato com o suporte.");
-        }
-
+        setPaymentStatus("success");
         setStep("success");
-      } else if (confirmResult.status === "requires_action") {
-        // Payment requires additional action (e.g., 3D Secure)
-        console.error("[Checkout] Payment requires action:", confirmResult.status);
-        toast.error("Seu pagamento requer autenticação. Por favor, complete a verificação.", { id: processingToast });
-        setStep("payment");
+        toast.success("Pagamento aprovado com sucesso!");
+
+        // Redirect to dashboard after delay
+        setTimeout(() => {
+          router.push("/dashboard?payment=success");
+        }, 3000);
+      } else if (result.status === "pending" || result.status === "in_process") {
+        setPaymentStatus("processing");
+        toast.info("Pagamento em análise. Você receberá uma notificação quando for aprovado.");
+
+        setTimeout(() => {
+          router.push("/dashboard?payment=pending");
+        }, 3000);
       } else {
-        console.error("[Checkout] Payment status:", confirmResult.status);
-        toast.error(`Pagamento pendente: ${confirmResult.status}`, { id: processingToast });
-        setStep("payment");
+        throw new Error(`Pagamento não autorizado: ${result.statusDetail || result.status}`);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || "Erro ao processar pagamento";
-      console.error("[Checkout] Payment error:", error);
-      toast.error(`Erro no pagamento: ${errorMessage}`);
+      console.error("[Checkout] Card payment error:", error);
+      setPaymentStatus("error");
+      setErrorMessage(error.message || "Erro ao processar pagamento com cartão");
+      toast.error(error.message || "Erro ao processar pagamento com cartão");
       setStep("payment");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (step === "processing") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-gray-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Processando pagamento...</h2>
-          <p className="text-gray-500">Aguarde enquanto confirmamos seu pagamento.</p>
+  const handlePixPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate form
+    if (!customerEmail || !firstName || !lastName || !cpf) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    // Validate email
+    if (!customerEmail.includes("@")) {
+      toast.error("E-mail inválido");
+      return;
+    }
+
+    // Validate CPF format (11 digits)
+    const cpfClean = cpf.replace(/\D/g, "");
+    if (cpfClean.length !== 11) {
+      toast.error("CPF deve ter 11 dígitos");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setPaymentStatus("processing");
+      setStep("processing");
+
+      console.log("[Checkout] Creating PIX payment...");
+
+      const result = await createPixPayment.mutateAsync({
+        planId: selectedPlanId!,
+        customerEmail,
+        firstName,
+        lastName,
+        cpf: cpfClean,
+      });
+
+      console.log("[Checkout] PIX payment created:", result);
+
+      // Store PIX data
+      setPixPaymentId(result.id);
+      setPixQrCode(result.pixQrCode);
+      setPixQrCodeBase64(result.pixQrCodeBase64);
+      setPixExpirationDate(result.pixExpirationDate);
+
+      toast.success("Código PIX gerado! Escaneie o QR Code para pagar.");
+    } catch (error: any) {
+      console.error("[Checkout] PIX payment error:", error);
+      setPaymentStatus("error");
+      setErrorMessage(error.message || "Erro ao gerar código PIX");
+      toast.error(error.message || "Erro ao gerar código PIX");
+      setIsLoading(false);
+      setStep("payment");
+    }
+  };
+
+  const handleSubscriptionCreation = async (paymentId: string) => {
+    try {
+      console.log("[Checkout] Creating subscription for payment:", paymentId);
+
+      await createSubscription.mutateAsync({
+        planId: selectedPlanId!,
+        durationMonths: 12, // Annual subscription
+      });
+
+      console.log("[Checkout] Subscription created successfully");
+    } catch (error: any) {
+      console.error("[Checkout] Subscription creation error:", error);
+      // Don't fail the flow - payment was successful
+      toast.warning("Pagamento confirmado. Assinatura será ativada em breve.");
+    }
+  };
+
+  const handleCopyPixCode = () => {
+    if (pixQrCode) {
+      navigator.clipboard.writeText(pixQrCode);
+      toast.success("Código PIX copiado!");
+    }
+  };
+
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  // Render plan selection step
+  const renderPlanSelection = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          Escolha seu plano
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Crie memoriais digitais eternos para seus entes queridos
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {plans.map((plan) => (
+          <Card
+            key={plan.id}
+            className={`relative cursor-pointer transition-all hover:shadow-lg ${
+              selectedPlanId === plan.id
+                ? "ring-2 ring-primary shadow-xl"
+                : "hover:ring-1 hover:ring-gray-300"
+            } ${plan.popular ? "border-primary" : ""}`}
+            onClick={() => handleSelectPlan(plan.id)}
+          >
+            {plan.popular && (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <span className="bg-primary text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-current" />
+                  POPULAR
+                </span>
+              </div>
+            )}
+
+            <CardHeader>
+              <CardTitle className="text-xl">{plan.name}</CardTitle>
+              <div className="mt-4">
+                <span className="text-4xl font-bold text-primary">
+                  R$ {plan.price.toFixed(2)}
+                </span>
+                <span className="text-gray-600 dark:text-gray-400">/{plan.period}</span>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              <ul className="space-y-3">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {selectedPlanId === plan.id && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-primary font-semibold">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Selecionado
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="flex justify-center">
+        <Button
+          size="lg"
+          onClick={handleContinueToPayment}
+          disabled={!selectedPlanId}
+          className="min-w-[200px]"
+        >
+          Continuar para pagamento
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Render payment step
+  const renderPaymentStep = () => (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/dashboard")}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+        <div>
+          <h2 className="text-2xl font-bold">Pagamento</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {selectedPlan?.name} - R$ {selectedPlan?.price.toFixed(2)}/{selectedPlan?.period}
+          </p>
         </div>
       </div>
-    );
-  }
 
-  if (step === "success") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="p-8 sm:p-12 text-center">
-            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
-              <Check className="w-10 h-10 text-gray-700" />
+      {/* Payment method tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Escolha a forma de pagamento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button
+              onClick={() => setPaymentMethod("card")}
+              className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                paymentMethod === "card"
+                  ? "border-primary bg-primary/5"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <CreditCard className={`w-8 h-8 ${paymentMethod === "card" ? "text-primary" : "text-gray-500"}`} />
+              <span className="font-medium">Cartão de Crédito</span>
+            </button>
+
+            <button
+              onClick={() => setPaymentMethod("pix")}
+              className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                paymentMethod === "pix"
+                  ? "border-primary bg-primary/5"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <QrCode className={`w-8 h-8 ${paymentMethod === "pix" ? "text-primary" : "text-gray-500"}`} />
+              <span className="font-medium">PIX</span>
+            </button>
+          </div>
+
+          {/* Card payment form */}
+          {paymentMethod === "card" && (
+            <div>
+              {!mpInstance ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2">Carregando Mercado Pago...</span>
+                </div>
+              ) : (
+                <form id="form-checkout" className="space-y-4">
+                  <div>
+                    <Label htmlFor="form-checkout__cardholderEmail">E-mail *</Label>
+                    <input
+                      type="email"
+                      id="form-checkout__cardholderEmail"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="seu@email.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Número do Cartão *</Label>
+                    <div id="form-checkout__cardNumber" className="border border-gray-300 rounded-md p-1 h-[38px]" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Data de Validade *</Label>
+                      <div id="form-checkout__expirationDate" className="border border-gray-300 rounded-md p-1 h-[38px]" />
+                    </div>
+                    <div>
+                      <Label>Código de Segurança *</Label>
+                      <div id="form-checkout__securityCode" className="border border-gray-300 rounded-md p-1 h-[38px]" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Nome do Titular *</Label>
+                    <input
+                      type="text"
+                      id="form-checkout__cardholderName"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="Nome como está no cartão"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label>CPF *</Label>
+                    <input
+                      type="text"
+                      id="form-checkout__identificationNumber"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      required
+                    />
+                  </div>
+
+                  <select id="form-checkout__identificationType" className="hidden">
+                    <option value="CPF">CPF</option>
+                  </select>
+
+                  <div>
+                    <Label>Banco Emissor *</Label>
+                    <select
+                      id="form-checkout__issuer"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Parcelas *</Label>
+                    <select
+                      id="form-checkout__installments"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <Shield className="w-4 h-4" />
+                    <span>Pagamento 100% seguro via Mercado Pago</span>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    size="lg"
+                    disabled={!cardFormReady || isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="mr-2 h-4 w-4" />
+                        Pagar R$ {selectedPlan?.price.toFixed(2)}
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Pagamento Confirmado!</h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Seu memorial está pronto para ser criado.
-            </p>
-            <div className="space-y-3">
+          )}
+
+          {/* PIX payment form */}
+          {paymentMethod === "pix" && (
+            <form onSubmit={handlePixPayment} className="space-y-4">
+              <div>
+                <Label htmlFor="email">E-mail *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">Nome *</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="João"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Sobrenome *</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Silva"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="cpf">CPF *</Label>
+                <Input
+                  id="cpf"
+                  value={formatCPF(cpf)}
+                  onChange={(e) => setCpf(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  required
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <Shield className="w-4 h-4" />
+                <span>Pagamento instantâneo e seguro</span>
+              </div>
+
               <Button
-                onClick={() => router.push("/dashboard")}
-                className="w-full sm:w-auto btn-primary"
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={isLoading}
               >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando QR Code...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Gerar PIX - R$ {selectedPlan?.price.toFixed(2)}
+                  </>
+                )}
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Render processing step
+  const renderProcessingStep = () => (
+    <div className="max-w-2xl mx-auto">
+      <Card>
+        <CardContent className="pt-6">
+          {paymentMethod === "pix" && pixQrCodeBase64 ? (
+            <div className="text-center space-y-6">
+              <h3 className="text-2xl font-bold">Escaneie o QR Code para pagar</h3>
+
+              <div className="flex justify-center">
+                <img
+                  src={`data:image/png;base64,${pixQrCodeBase64}`}
+                  alt="QR Code PIX"
+                  className="w-64 h-64 border-4 border-gray-200 rounded-lg"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ou copie o código PIX:</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={pixQrCode || ""}
+                    readOnly
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handleCopyPixCode}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {pixExpirationDate && (
+                <p className="text-sm text-gray-600">
+                  Expira em: {new Date(pixExpirationDate).toLocaleString('pt-BR')}
+                </p>
+              )}
+
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="font-medium">Aguardando pagamento...</span>
+                </div>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+                  O pagamento será confirmado automaticamente após a aprovação.
+                </p>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStep("payment");
+                  setPixPaymentId(null);
+                  setPixQrCode(null);
+                  setPixQrCodeBase64(null);
+                  setIsLoading(false);
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center space-y-4 py-12">
+              <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
+              <h3 className="text-xl font-semibold">Processando pagamento...</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Por favor, aguarde enquanto processamos seu pagamento.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Render success step
+  const renderSuccessStep = () => (
+    <div className="max-w-2xl mx-auto">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center space-y-6 py-8">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-6">
+                <CheckCircle2 className="h-16 w-16 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Pagamento confirmado!
+              </h3>
+              <p className="text-lg text-gray-600 dark:text-gray-400">
+                Sua assinatura foi ativada com sucesso.
+              </p>
+            </div>
+
+            <div className="bg-primary/10 rounded-lg p-6 space-y-2">
+              <p className="font-semibold text-primary">
+                {selectedPlan?.name}
+              </p>
+              <p className="text-2xl font-bold">
+                R$ {selectedPlan?.price.toFixed(2)}/{selectedPlan?.period}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Válido por 1 ano
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => router.push("/dashboard")}
+              >
+                <Heart className="mr-2 h-5 w-5" />
                 Ir para o Dashboard
               </Button>
+
               <Button
-                onClick={() => router.push("/")}
+                size="lg"
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-full"
+                onClick={() => router.push("/memorial/create")}
               >
-                Voltar ao Início
+                <Sparkles className="mr-2 h-5 w-5" />
+                Criar Primeiro Memorial
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <button
-            onClick={() => {
-              if (step === "plan") {
-                router.push("/");
-              } else if (step === "payment" && planFromUrl) {
-                // If came from landing page with plan in URL, go back to homepage
-                router.push("/");
-              } else {
-                setStep("plan");
-              }
-            }}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Voltar</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-gray-600" />
-            <span className="font-bold text-gray-900">{APP_TITLE}</span>
-          </div>
-          <div className="w-20"></div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+      <div className="container mx-auto">
+        {step === "plan" && renderPlanSelection()}
+        {step === "payment" && renderPaymentStep()}
+        {step === "processing" && renderProcessingStep()}
+        {step === "success" && renderSuccessStep()}
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Plan Selection */}
-        {step === "plan" && (
-          <div>
-            <div className="text-center mb-12">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                Memorial Essencial
-              </h1>
-              <p className="text-lg text-gray-600">
-                Plano completo por apenas R$ 19,90/ano
-              </p>
-            </div>
-
-            <div className="flex justify-center mb-8">
-              {plans.map((plan) => (
-                <Card
-                  key={plan.id}
-                  className="relative transition-all ring-2 ring-gray-600 shadow-lg max-w-md w-full"
-                >
-                  <CardHeader>
-                    <CardTitle className="text-center">
-                      <div className="mb-4">
-                        <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                      </div>
-                      <div className="mb-6">
-                        <span className="text-4xl font-bold text-gray-600">
-                          R$ {plan.price.toFixed(2)}
-                        </span>
-                        <span className="text-gray-500">/{plan.period}</span>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      {plan.features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-gray-600">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="text-xs text-center text-gray-500 pt-4 border-t">
-                      Pagamento seguro via PIX ou cartão de crédito
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="text-center">
-              <Button
-                onClick={handleContinueToPayment}
-                className="btn-primary px-8 py-3 text-lg"
-              >
-                Continuar para Pagamento
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Payment */}
-        {step === "payment" && selectedPlan && (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Finalizar Pagamento</h1>
-              <p className="text-gray-600">
-                Plano: <strong>{selectedPlan.name}</strong> - R$ {selectedPlan.price.toFixed(2)}/{selectedPlan.period}
-              </p>
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detalhes do Pagamento</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Email */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={customerEmail}
-                        onChange={(e) => setCustomerEmail(e.target.value)}
-                        placeholder="seu@email.com"
-                        className="input-modern w-full"
-                      />
-                    </div>
-
-                    {/* Payment Method Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Método de Pagamento
-                      </label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setPaymentMethod("card")}
-                          className={`p-4 border-2 rounded-xl flex items-center justify-center gap-2 transition-all ${
-                            paymentMethod === "card"
-                              ? "border-gray-600 bg-gray-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <CreditCard className="w-5 h-5" />
-                          <span className="font-medium">Cartão</span>
-                        </button>
-                        <button
-                          onClick={() => toast.info("Pagamento via PIX estará disponível em breve!")}
-                          disabled
-                          className="p-4 border-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed relative"
-                        >
-                          <div className="flex items-center gap-2">
-                            <QrCode className="w-5 h-5 text-gray-400" />
-                            <span className="font-medium text-gray-400">PIX</span>
-                          </div>
-                          <span className="text-xs text-gray-500">Em breve</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Card Form with Stripe Elements */}
-                    {paymentMethod === "card" && (
-                      <div className="space-y-4 pt-4 border-t">
-                        {(!stripe || !isCardReady) && (
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                            <p className="text-sm text-yellow-800 flex items-center gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              {!stripe ? "Carregando Stripe..." : "Carregando formulário do cartão..."}
-                            </p>
-                          </div>
-                        )}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Nome do Titular
-                          </label>
-                          <input
-                            type="text"
-                            value={cardholderName}
-                            onChange={(e) => setCardholderName(e.target.value)}
-                            placeholder="Como está no cartão"
-                            className="input-modern w-full"
-                            disabled={!stripe}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Informações do Cartão
-                          </label>
-                          <div className="border rounded-lg p-3 bg-white">
-                            {stripe ? (
-                              <CardElement
-                                options={{
-                                  style: {
-                                    base: {
-                                      fontSize: "16px",
-                                      color: "#374151",
-                                      "::placeholder": {
-                                        color: "#9CA3AF",
-                                      },
-                                      fontFamily: "ui-sans-serif, system-ui, sans-serif",
-                                    },
-                                    invalid: {
-                                      color: "#EF4444",
-                                    },
-                                  },
-                                }}
-                              />
-                            ) : (
-                              <div className="py-3 text-center text-gray-400">
-                                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Stripe Elements fornece validação em tempo real
-                          </p>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> Seu cartão é seguro com Stripe. Seus dados não passam pelo nosso servidor.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* PIX Info */}
-                    {paymentMethod === "pix" && (
-                      <div className="pt-4 border-t text-center">
-                        <div className="bg-gray-100 rounded-xl p-8 mb-4">
-                          <QrCode className="w-32 h-32 mx-auto text-gray-400 mb-4" />
-                          <p className="text-sm text-gray-600">
-                            O QR Code PIX será gerado após confirmar o pagamento
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handleProcessPayment}
-                      className="w-full btn-primary"
-                      disabled={isLoading || (paymentMethod === "card" && (!stripe || !isCardReady))}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Processando...
-                        </>
-                      ) : (paymentMethod === "card" && (!stripe || !isCardReady)) ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Carregando formulário...
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4 mr-2" />
-                          Confirmar Pagamento
-                        </>
-                      )}
-                    </Button>
-
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                      <Shield className="w-4 h-4" />
-                      <span>Pagamento 100% seguro e criptografado</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Order Summary */}
-              <div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Resumo do Pedido</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="font-medium text-gray-900">{selectedPlan.name}</p>
-                      <p className="text-sm text-gray-500">Renovação anual</p>
-                    </div>
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between mb-2">
-                        <span className="text-gray-600">Subtotal</span>
-                        <span>R$ {selectedPlan.price.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>Total</span>
-                        <span className="text-gray-600">R$ {selectedPlan.price.toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-sm text-gray-800 font-medium mb-2">
-                        ✓ Inclui neste plano:
-                      </p>
-                      <ul className="text-xs text-gray-700 space-y-1">
-                        {selectedPlan.features.slice(0, 3).map((feature, index) => (
-                          <li key={index}>• {feature}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Error display */}
+        {paymentStatus === "error" && errorMessage && step !== "success" && (
+          <div className="max-w-2xl mx-auto mt-6">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-red-900 dark:text-red-100">
+                    Erro no pagamento
+                  </h4>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    {errorMessage}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
 
 export default function CheckoutPage() {
-  // Show error if Stripe is not configured
-  if (!stripePromise) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle className="text-red-600">Stripe não configurado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 mb-4">
-              A chave pública do Stripe não está configurada. Configure a variável de ambiente{" "}
-              <code className="bg-gray-100 px-2 py-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>{" "}
-              para habilitar pagamentos.
-            </p>
-            <Button onClick={() => window.location.href = "/"} className="w-full">
-              Voltar ao Início
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
-      </div>
-    }>
-      <Elements stripe={stripePromise}>
-        <CheckoutContent />
-      </Elements>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <CheckoutContent />
     </Suspense>
   );
 }

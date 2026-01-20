@@ -251,12 +251,12 @@ export const subscriptions = pgTable("subscriptions", {
   userId: integer("user_id").notNull(),
   /** Type of user this subscription belongs to */
   userType: userTypeEnum("user_type").notNull(),
-  /** Plan ID from Stripe products (essencial, premium, familia) */
+  /** Plan ID from payment products (essencial, premium, familia) */
   planId: varchar("plan_id", { length: 50 }).notNull(),
-  /** Stripe customer ID for payment management */
-  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
-  /** Stripe subscription ID (if using Stripe subscriptions vs one-time payments) */
-  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  /** Mercado Pago customer ID for payment management */
+  mpCustomerId: varchar("mp_customer_id", { length: 255 }),
+  /** Mercado Pago subscription ID (if using subscriptions vs one-time payments) */
+  mpSubscriptionId: varchar("mp_subscription_id", { length: 255 }),
   /** Current subscription status */
   status: subscriptionStatusEnum("status").default("active").notNull(),
   /** Start of current billing period */
@@ -281,10 +281,10 @@ export const paymentTransactions = pgTable("payment_transactions", {
   id: serial("id").primaryKey(),
   /** Link to subscription (optional - payments may exist before subscription creation) */
   subscriptionId: integer("subscription_id"),
-  /** Stripe payment intent ID */
-  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }).notNull().unique(),
-  /** Stripe payment method ID */
-  stripePaymentMethodId: varchar("stripe_payment_method_id", { length: 255 }),
+  /** Mercado Pago payment ID */
+  mpPaymentId: varchar("mp_payment_id", { length: 255 }).notNull().unique(),
+  /** Mercado Pago payment method ID */
+  mpPaymentMethodId: varchar("mp_payment_method_id", { length: 255 }),
   /** Amount in cents (e.g., 1990 for R$ 19.90) */
   amount: integer("amount").notNull(),
   /** Currency code (default: BRL) */
@@ -301,6 +301,16 @@ export const paymentTransactions = pgTable("payment_transactions", {
   failureReason: text("failure_reason"),
   /** Additional metadata as JSON string */
   metadata: text("metadata"),
+  /** PIX QR code string (for PIX payments) */
+  pixQrCode: text("pix_qr_code"),
+  /** PIX QR code as base64 image (for PIX payments) */
+  pixQrCodeBase64: text("pix_qr_code_base64"),
+  /** PIX expiration date (for PIX payments) */
+  pixExpirationDate: timestamp("pix_expiration_date"),
+  /** External reference for tracking */
+  externalReference: varchar("external_reference", { length: 255 }),
+  /** Webhook notification URL */
+  notificationUrl: text("notification_url"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
