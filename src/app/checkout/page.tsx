@@ -77,6 +77,18 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Authentication check - CRITICAL: Must be logged in to purchase
+  const { data: currentUser, isLoading: isCheckingAuth } = api.auth.me.useQuery();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isCheckingAuth && !currentUser) {
+      console.log("[Checkout] User not authenticated - redirecting to login");
+      toast.error("Você precisa estar logado para comprar créditos");
+      router.push(`/login?redirect=/checkout${window.location.search}`);
+    }
+  }, [currentUser, isCheckingAuth, router]);
+
   // State management
   const [step, setStep] = useState<CheckoutStep>("plan");
   const [isLoading, setIsLoading] = useState(false);
@@ -920,6 +932,23 @@ function CheckoutContent() {
       </Card>
     </div>
   );
+
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-gray-600" />
+          <p className="text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!currentUser) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
