@@ -102,41 +102,59 @@ const authRouter = router({
   getSubscriptionStatus: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return null;
 
-    // Funeral homes have memorial credits
+    // Funeral homes - check their wallet
     if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
       const funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
       const funeralHome = await db.getFuneralHomeById(funeralHomeId);
 
       if (!funeralHome) return null;
 
-      const memorialCredits = funeralHome.memorialCredits || 0;
+      // Get wallet balance
+      const walletBalance = await db.getWalletBalance('funeral_home', funeralHomeId);
 
       return {
         hasSubscription: true, // Keep for compatibility
         status: funeralHome.subscriptionStatus,
         expiresAt: funeralHome.subscriptionExpiresAt,
         isExpired: false,
-        canCreateMemorials: memorialCredits > 0,
-        memorialCredits, // Number of memorials available
+        canCreateMemorials: walletBalance > 0,
+        memorialCredits: walletBalance,
+        personalWallet: walletBalance,
+        familyWallet: null,
       };
     }
 
-    // Family users also use memorial credits now
+    // Family users - check personal wallet and family wallet (if member)
     if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
       const familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
       const familyUser = await db.getFamilyUserById(familyUserId);
 
       if (!familyUser) return null;
 
-      const memorialCredits = familyUser.memorialCredits || 0;
+      // Get personal wallet balance
+      const personalWallet = await db.getWalletBalance('user', familyUserId);
+
+      // Get family wallet balance (if user is in a family)
+      let familyWallet = null;
+      let familyId = null;
+      if (familyUser.familyId) {
+        familyWallet = await db.getWalletBalance('family', familyUser.familyId);
+        familyId = familyUser.familyId;
+      }
+
+      // Total credits available = personal + family
+      const totalCredits = personalWallet + (familyWallet || 0);
 
       return {
         hasSubscription: false,
         status: null,
         expiresAt: null,
         isExpired: false,
-        canCreateMemorials: memorialCredits > 0,
-        memorialCredits, // Number of memorials available
+        canCreateMemorials: totalCredits > 0,
+        memorialCredits: totalCredits,
+        personalWallet,
+        familyWallet,
+        familyId,
       };
     }
 
@@ -428,39 +446,50 @@ const memorialRouter = router({
 
       let familyUserId: number | null = null;
       let funeralHomeId: number | null = input.funeralHomeId || null;
+      let walletToDeduct: { type: 'user' | 'family' | 'funeral_home'; id: number; walletId: number } | null = null;
 
-      // Determine who is creating the memorial
+      // Determine who is creating the memorial and which wallet to use
       if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
         // Funeral home creating memorial
         funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
 
-        // Check memorial credits for funeral homes
         const funeralHome = await db.getFuneralHomeById(funeralHomeId);
         if (!funeralHome) throw new Error("Funerária não encontrada");
 
-        // Check if they have available credits
-        const availableCredits = funeralHome.memorialCredits || 0;
-        if (availableCredits <= 0) {
+        // Check wallet balance
+        const wallet = await db.getOrCreateWallet('funeral_home', funeralHomeId);
+        if (!wallet || wallet.credits <= 0) {
           throw new Error("Você não possui créditos disponíveis. Compre créditos para criar novos memoriais.");
         }
 
-        // Don't set familyUserId yet - will be assigned when family claims it
-      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
-        // Family user creating memorial - also needs credits now
-        familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        walletToDeduct = { type: 'funeral_home', id: funeralHomeId, walletId: wallet.id };
 
-        // Check memorial credits for family users
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        // Family user creating memorial
+        familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        funeralHomeId = null;
+
         const familyUser = await db.getFamilyUserById(familyUserId);
         if (!familyUser) throw new Error("Usuário familiar não encontrado");
 
-        // Check if they have available credits
-        const availableCredits = familyUser.memorialCredits || 0;
-        if (availableCredits <= 0) {
+        // Check family wallet first (if user is in a family)
+        let familyWallet = null;
+        if (familyUser.familyId) {
+          familyWallet = await db.getOrCreateWallet('family', familyUser.familyId);
+        }
+
+        // Check personal wallet
+        const personalWallet = await db.getOrCreateWallet('user', familyUserId);
+
+        // Prefer family wallet if available and has credits
+        if (familyWallet && familyWallet.credits > 0) {
+          walletToDeduct = { type: 'family', id: familyUser.familyId!, walletId: familyWallet.id };
+        } else if (personalWallet && personalWallet.credits > 0) {
+          walletToDeduct = { type: 'user', id: familyUserId, walletId: personalWallet.id };
+        } else {
           throw new Error("Você não possui créditos disponíveis. Compre créditos para criar novos memoriais.");
         }
 
-        // No funeral home associated
-        funeralHomeId = null;
       } else {
         throw new Error("Tipo de usuário não suportado");
       }
@@ -489,19 +518,14 @@ const memorialRouter = router({
         .set({ slug: finalSlug })
         .where(eq(memorials.id, memorialId));
 
-      // Decrement memorial credits after successful creation
-      if (funeralHomeId) {
-        await dbInstance.update(funeralHomes)
-          .set({
-            memorialCredits: sql`${funeralHomes.memorialCredits} - 1`
-          })
-          .where(eq(funeralHomes.id, funeralHomeId));
-      } else if (familyUserId) {
-        await dbInstance.update(familyUsers)
-          .set({
-            memorialCredits: sql`${familyUsers.memorialCredits} - 1`
-          })
-          .where(eq(familyUsers.id, familyUserId));
+      // Deduct 1 credit from the appropriate wallet
+      if (walletToDeduct) {
+        const success = await db.updateWalletCredits(walletToDeduct.walletId, -1);
+        if (!success) {
+          console.error('[Memorial Creation] Failed to deduct credit from wallet');
+          // Memorial was created but credit wasn't deducted - this is a critical error
+          // In production, you might want to rollback the memorial creation
+        }
       }
 
       return { id: memorialId, slug: finalSlug, familyUserId };
@@ -1406,6 +1430,209 @@ const paymentRouter = router({
     }),
 });
 
+// Wallet Router - Credit management
+const walletRouter = router({
+  // Get wallet balance
+  getBalance: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Not authenticated");
+
+    let ownerType: 'user' | 'family' | 'funeral_home';
+    let ownerId: number;
+
+    if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+      ownerType = 'funeral_home';
+      ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+    } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+      ownerType = 'user';
+      ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+    } else {
+      throw new Error("Unsupported user type");
+    }
+
+    const balance = await db.getWalletBalance(ownerType, ownerId);
+    const wallet = await db.getOrCreateWallet(ownerType, ownerId);
+
+    return {
+      balance,
+      walletId: wallet?.id,
+    };
+  }),
+
+  // Get family wallet balance (if user is in a family)
+  getFamilyBalance: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Not authenticated");
+
+    if (!ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+      return null;
+    }
+
+    const userId = parseInt(ctx.user.openId.split("-")[1] || "0");
+    const user = await db.getFamilyUserById(userId);
+
+    if (!user || !user.familyId) {
+      return null;
+    }
+
+    const balance = await db.getWalletBalance('family', user.familyId);
+    const wallet = await db.getOrCreateWallet('family', user.familyId);
+
+    return {
+      balance,
+      walletId: wallet?.id,
+      familyId: user.familyId,
+    };
+  }),
+
+  // Transfer credits between wallets
+  transfer: protectedProcedure
+    .input(z.object({
+      toWalletId: z.number(),
+      amount: z.number().min(1),
+      note: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Not authenticated");
+
+      // Determine source wallet
+      let ownerType: 'user' | 'family' | 'funeral_home';
+      let ownerId: number;
+      let userId: number;
+
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        ownerType = 'funeral_home';
+        ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        userId = ownerId;
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        ownerType = 'user';
+        ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+        userId = ownerId;
+      } else {
+        throw new Error("Unsupported user type");
+      }
+
+      const fromWallet = await db.getOrCreateWallet(ownerType, ownerId);
+      if (!fromWallet) throw new Error("Source wallet not found");
+
+      // Perform transfer
+      const result = await db.transferCredits(
+        fromWallet.id,
+        input.toWalletId,
+        input.amount,
+        userId,
+        input.note
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Transfer failed");
+      }
+
+      return result;
+    }),
+
+  // Get transfer history
+  getTransfers: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Not authenticated");
+
+      let ownerType: 'user' | 'family' | 'funeral_home';
+      let ownerId: number;
+
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        ownerType = 'funeral_home';
+        ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        ownerType = 'user';
+        ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      } else {
+        throw new Error("Unsupported user type");
+      }
+
+      const wallet = await db.getOrCreateWallet(ownerType, ownerId);
+      if (!wallet) throw new Error("Wallet not found");
+
+      return db.getWalletTransfers(wallet.id, input.limit || 50);
+    }),
+});
+
+// Family Router - Family group management
+const familyRouter = router({
+  // Create a new family
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(255),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Not authenticated");
+
+      if (!ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        throw new Error("Only family users can create families");
+      }
+
+      const userId = parseInt(ctx.user.openId.split("-")[1] || "0");
+
+      // Check if user is already in a family
+      const user = await db.getFamilyUserById(userId);
+      if (user?.familyId) {
+        throw new Error("You are already a member of a family");
+      }
+
+      const family = await db.createFamily(input.name, userId, input.description);
+      if (!family) throw new Error("Failed to create family");
+
+      return family;
+    }),
+
+  // Get family details
+  getMyFamily: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Not authenticated");
+
+    if (!ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+      return null;
+    }
+
+    const userId = parseInt(ctx.user.openId.split("-")[1] || "0");
+    const user = await db.getFamilyUserById(userId);
+
+    if (!user || !user.familyId) {
+      return null;
+    }
+
+    const family = await db.getFamilyById(user.familyId);
+    if (!family) return null;
+
+    const members = await db.getFamilyMembers(user.familyId);
+    const wallet = await db.getWalletBalance('family', user.familyId);
+
+    return {
+      ...family,
+      members,
+      walletBalance: wallet,
+    };
+  }),
+
+  // Get family members
+  getMembers: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Not authenticated");
+
+    if (!ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+      return [];
+    }
+
+    const userId = parseInt(ctx.user.openId.split("-")[1] || "0");
+    const user = await db.getFamilyUserById(userId);
+
+    if (!user || !user.familyId) {
+      return [];
+    }
+
+    return db.getFamilyMembers(user.familyId);
+  }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -1416,6 +1643,8 @@ export const appRouter = router({
   lead: leadRouter,
   admin: adminRouter,
   payment: paymentRouter,
+  wallet: walletRouter,
+  family: familyRouter,
 });
 
 export type AppRouter = typeof appRouter;
