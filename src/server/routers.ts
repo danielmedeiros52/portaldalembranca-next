@@ -1337,6 +1337,68 @@ const paymentRouter = router({
       return getPlanDetails(input.planId);
     }),
 
+  // Add credits to wallet after successful payment
+  addCreditsFromPayment: protectedProcedure
+    .input(z.object({
+      planId: z.string(),
+      paymentId: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Not authenticated");
+
+      // Map plan ID to credit amount
+      const creditsByPlan: Record<string, number> = {
+        essencial: 1,    // R$ 19,90 = 1 memorial
+        premium: 5,      // R$ 99,90 = 5 memorials
+        familia: 13,     // R$ 249,90 = 13 memorials
+      };
+
+      const credits = creditsByPlan[input.planId];
+      if (!credits) {
+        throw new Error(`Invalid plan: ${input.planId}`);
+      }
+
+      // Verify payment was successful
+      const { getPaymentStatus } = await import('~/server/payments');
+      const paymentStatus = await getPaymentStatus(input.paymentId);
+
+      if (paymentStatus.status !== 'approved' && paymentStatus.status !== 'authorized') {
+        throw new Error(`Payment not approved. Current status: ${paymentStatus.status}`);
+      }
+
+      // Determine wallet owner
+      let ownerType: 'user' | 'family' | 'funeral_home';
+      let ownerId: number;
+
+      if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+        ownerType = 'funeral_home';
+        ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+        ownerType = 'user';
+        ownerId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      } else {
+        throw new Error("Unsupported user type");
+      }
+
+      // Get or create wallet
+      const wallet = await db.getOrCreateWallet(ownerType, ownerId);
+      if (!wallet) throw new Error("Failed to create wallet");
+
+      // Add credits
+      const success = await db.updateWalletCredits(wallet.id, credits);
+      if (!success) {
+        throw new Error("Failed to add credits to wallet");
+      }
+
+      console.log(`[Payment] Added ${credits} credits to ${ownerType} ${ownerId} wallet`);
+
+      return {
+        success: true,
+        creditsAdded: credits,
+        newBalance: wallet.credits + credits,
+      };
+    }),
+
   // Subscription management
   createSubscription: protectedProcedure
     .input(z.object({

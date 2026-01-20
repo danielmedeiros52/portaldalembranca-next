@@ -107,7 +107,7 @@ function CheckoutContent() {
   // tRPC mutations and queries
   const createCardPayment = api.payment.createCardPayment.useMutation();
   const createPixPayment = api.payment.createPixPayment.useMutation();
-  const createSubscription = api.payment.createSubscription.useMutation();
+  const addCreditsFromPayment = api.payment.addCreditsFromPayment.useMutation();
 
   // Poll for PIX payment status (only when we have a payment ID)
   const { data: paymentStatusData, refetch: refetchPaymentStatus } = api.payment.getPaymentStatus.useQuery(
@@ -287,7 +287,7 @@ function CheckoutContent() {
     if (paymentStatusData.status === "approved" || paymentStatusData.status === "authorized") {
       // Payment approved!
       console.log("[Checkout] PIX payment approved!");
-      handleSubscriptionCreation(pixPaymentId).then(() => {
+      handleCreditsAddition(pixPaymentId).then(() => {
         setPaymentStatus("success");
         setStep("success");
         toast.success("Pagamento PIX confirmado!");
@@ -346,7 +346,7 @@ function CheckoutContent() {
         console.log("[Checkout] Payment approved!");
 
         // Create subscription
-        await handleSubscriptionCreation(result.id);
+        await handleCreditsAddition(result.id);
 
         setPaymentStatus("success");
         setStep("success");
@@ -433,20 +433,21 @@ function CheckoutContent() {
     }
   };
 
-  const handleSubscriptionCreation = async (paymentId: string) => {
+  const handleCreditsAddition = async (paymentId: string) => {
     try {
-      console.log("[Checkout] Creating subscription for payment:", paymentId);
+      console.log("[Checkout] Adding credits for payment:", paymentId);
 
-      await createSubscription.mutateAsync({
+      const result = await addCreditsFromPayment.mutateAsync({
         planId: selectedPlanId!,
-        durationMonths: 12, // Annual subscription
+        paymentId: paymentId,
       });
 
-      console.log("[Checkout] Subscription created successfully");
+      console.log("[Checkout] Credits added successfully:", result);
+      toast.success(`${result.creditsAdded} crédito(s) adicionado(s) à sua conta!`);
     } catch (error: any) {
-      console.error("[Checkout] Subscription creation error:", error);
+      console.error("[Checkout] Credits addition error:", error);
       // Don't fail the flow - payment was successful
-      toast.warning("Pagamento confirmado. Assinatura será ativada em breve.");
+      toast.warning("Pagamento confirmado. Créditos serão adicionados em breve.");
     }
   };
 
