@@ -7,7 +7,7 @@ import { getDb } from "~/server/db";
 import { funeralHomes, familyUsers, memorials, descendants, photos, dedications, leads, orders, orderHistory, adminUsers } from "../../drizzle/schema";
 import type { InsertMemorial, InsertDescendant, InsertPhoto, InsertDedication, InsertLead, InsertOrder, InsertOrderHistory, InsertAdminUser } from "../../drizzle/schema";
 import * as db from "~/server/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { generateMemorialQRCode, generateMemorialQRCodeSVG } from "~/server/qrcode";
@@ -427,25 +427,14 @@ const memorialRouter = router({
         // Funeral home creating memorial
         funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
 
-        // Check subscription status for funeral homes
+        // Check memorial credits for funeral homes
         const funeralHome = await db.getFuneralHomeById(funeralHomeId);
         if (!funeralHome) throw new Error("Funerária não encontrada");
 
-        // Block if subscription is cancelled or expired
-        if (funeralHome.subscriptionStatus === "cancelled" || funeralHome.subscriptionStatus === "expired") {
-          throw new Error("Sua assinatura está inativa. Por favor, renove sua assinatura para criar novos memoriais.");
-        }
-
-        // Check if active or trialing subscription has expired
-        if (funeralHome.subscriptionStatus === "trialing" || funeralHome.subscriptionStatus === "active") {
-          if (funeralHome.subscriptionExpiresAt && new Date(funeralHome.subscriptionExpiresAt) < new Date()) {
-            throw new Error("Sua assinatura expirou. Por favor, renove para criar novos memoriais.");
-          }
-        }
-
-        // Block past_due subscriptions
-        if (funeralHome.subscriptionStatus === "past_due") {
-          throw new Error("Seu pagamento está pendente. Por favor, regularize para criar novos memoriais.");
+        // Check if they have available credits
+        const availableCredits = funeralHome.memorialCredits || 0;
+        if (availableCredits <= 0) {
+          throw new Error("Você não possui créditos disponíveis. Compre créditos para criar novos memoriais.");
         }
 
         // Don't set familyUserId yet - will be assigned when family claims it
@@ -481,6 +470,15 @@ const memorialRouter = router({
       await dbInstance.update(memorials)
         .set({ slug: finalSlug })
         .where(eq(memorials.id, memorialId));
+
+      // Decrement memorial credits for funeral homes after successful creation
+      if (funeralHomeId) {
+        await dbInstance.update(funeralHomes)
+          .set({
+            memorialCredits: sql`${funeralHomes.memorialCredits} - 1`
+          })
+          .where(eq(funeralHomes.id, funeralHomeId));
+      }
 
       return { id: memorialId, slug: finalSlug, familyUserId };
     }),

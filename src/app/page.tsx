@@ -83,16 +83,6 @@ export default function HomePage() {
               Memoriais Históricos
             </Button>
             <Button
-              variant="ghost"
-              className="hidden sm:inline-flex text-gray-600 hover:text-gray-900"
-              onClick={() => {
-                const pricingSection = document.getElementById("pricing");
-                pricingSection?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              Planos
-            </Button>
-            <Button
               onClick={() => router.push("/login")}
               variant="ghost"
               className="text-gray-600 hover:text-gray-900 text-sm sm:text-base"
@@ -103,7 +93,7 @@ export default function HomePage() {
               onClick={() => router.push("/checkout?plan=essencial")}
               className="bg-gray-800 hover:bg-gray-900 text-white text-sm sm:text-base px-3 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors"
             >
-              Começar
+              Criar Memorial
             </Button>
           </div>
         </div>
@@ -138,7 +128,7 @@ export default function HomePage() {
                   variant="outline"
                   className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-lg transition-colors"
                 >
-                  Ver Planos
+                  Ver Preço
                 </Button>
               </div>
 
