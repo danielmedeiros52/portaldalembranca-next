@@ -228,13 +228,13 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center">
-                <User className="w-7 h-7 text-blue-700" />
+                <QrCode className="w-7 h-7 text-blue-700" />
               </div>
               <div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {subscriptionStatus?.personalWallet ?? 0}
+                  {subscriptionStatus?.memorialCredits ?? 0}
                 </p>
-                <p className="text-sm text-gray-600">Carteira Pessoal</p>
+                <p className="text-sm text-gray-600">Memoriais Disponíveis</p>
               </div>
             </div>
           </div>
