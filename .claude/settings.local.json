@@ -25,7 +25,12 @@
       "Bash(curl:*)",
       "Bash(findstr:*)",
       "WebSearch",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(node check-and-add-credits.mjs:*)",
+      "Bash(node -e:*)",
+      "Bash(pgrep:*)",
+      "Bash(tasklist:*)",
+      "Bash(node:*)"
     ]
   }
 }

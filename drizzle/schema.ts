@@ -72,6 +72,7 @@ export const familyUsers = pgTable("family_users", {
   invitationToken: varchar("invitation_token", { length: 255 }),
   invitationExpiry: timestamp("invitation_expiry"),
   isActive: boolean("is_active").default(false).notNull(),
+  memorialCredits: integer("memorial_credits").default(0).notNull(), // Number of memorials user can create
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

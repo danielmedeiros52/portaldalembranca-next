@@ -121,15 +121,22 @@ const authRouter = router({
       };
     }
 
-    // Family users don't need credits (they edit existing memorials)
+    // Family users also use memorial credits now
     if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+      const familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      const familyUser = await db.getFamilyUserById(familyUserId);
+
+      if (!familyUser) return null;
+
+      const memorialCredits = familyUser.memorialCredits || 0;
+
       return {
         hasSubscription: false,
         status: null,
         expiresAt: null,
         isExpired: false,
-        canCreateMemorials: true, // Family users can always create/edit
-        memorialCredits: null, // Not applicable for family users
+        canCreateMemorials: memorialCredits > 0,
+        memorialCredits, // Number of memorials available
       };
     }
 
@@ -439,8 +446,19 @@ const memorialRouter = router({
 
         // Don't set familyUserId yet - will be assigned when family claims it
       } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
-        // Family user creating memorial - no subscription required
+        // Family user creating memorial - also needs credits now
         familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
+
+        // Check memorial credits for family users
+        const familyUser = await db.getFamilyUserById(familyUserId);
+        if (!familyUser) throw new Error("Usuário familiar não encontrado");
+
+        // Check if they have available credits
+        const availableCredits = familyUser.memorialCredits || 0;
+        if (availableCredits <= 0) {
+          throw new Error("Você não possui créditos disponíveis. Compre créditos para criar novos memoriais.");
+        }
+
         // No funeral home associated
         funeralHomeId = null;
       } else {
@@ -471,13 +489,19 @@ const memorialRouter = router({
         .set({ slug: finalSlug })
         .where(eq(memorials.id, memorialId));
 
-      // Decrement memorial credits for funeral homes after successful creation
+      // Decrement memorial credits after successful creation
       if (funeralHomeId) {
         await dbInstance.update(funeralHomes)
           .set({
             memorialCredits: sql`${funeralHomes.memorialCredits} - 1`
           })
           .where(eq(funeralHomes.id, funeralHomeId));
+      } else if (familyUserId) {
+        await dbInstance.update(familyUsers)
+          .set({
+            memorialCredits: sql`${familyUsers.memorialCredits} - 1`
+          })
+          .where(eq(familyUsers.id, familyUserId));
       }
 
       return { id: memorialId, slug: finalSlug, familyUserId };
