@@ -480,12 +480,28 @@ describe("memorial procedures", () => {
 
 ## Documentation Files
 
-- `README.md` - Comprehensive project overview and setup
-- `ENV_SETUP.md` - Environment variable configuration
-- `DATABASE_SETUP.md` - Database migration instructions
-- `MIGRATION_CERTIFICATION.md` - Vite to Next.js migration audit
-- `OAUTH_CONFIG.md` - OAuth setup (optional)
-- `QUICK_WINS_SUMMARY.md` - Post-migration improvements
+All documentation is organized in the **`.docs/`** directory:
+
+**Root Documentation** (always in root):
+- `README.md` - Main project overview and setup guide
+- `CLAUDE.md` - This file (Claude Code instructions)
+
+**Organized Documentation** (in `.docs/`):
+- `.docs/README.md` - Complete documentation index
+- `.docs/migration/` - Payment system migration (Stripe → Mercado Pago)
+- `.docs/setup/` - Setup guides (ENV, Database, HTTPS, Docker)
+- `.docs/testing/` - Testing guides and results
+- `.docs/deployment/` - Deployment guides (Vercel, production)
+- `.docs/guides/` - Feature guides (Admin, Subscriptions, etc.)
+- `.docs/archive/` - Outdated/historical documentation
+
+**Quick Reference**:
+- Environment Setup: `.docs/setup/ENV_SETUP.md`
+- Database Setup: `.docs/setup/DATABASE_SETUP.md`
+- Payment System: `.docs/migration/FINAL_MIGRATION_STATUS.md`
+- HTTPS Setup (Local): `.docs/setup/HTTPS_SETUP.md`
+- Vercel Deployment: `.docs/deployment/VERCEL_DEPLOYMENT.md`
+- Testing: `.docs/testing/TESTING_GUIDE.md`
 
 ## Deployment
 

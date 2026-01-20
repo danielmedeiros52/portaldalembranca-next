@@ -109,16 +109,28 @@ pnpm typecheck     # Run TypeScript type checking
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the following files:
+Comprehensive documentation is organized in the **`.docs/`** directory:
 
-| Document | Purpose |
-|----------|---------|
-| **MIGRATION_CERTIFICATION.md** | Complete migration audit and certification |
-| **ENV_SETUP.md** | Environment variable configuration guide |
-| **DATABASE_SETUP.md** | Database migration and setup instructions |
-| **OAUTH_CONFIG.md** | OAuth configuration (optional) |
-| **QUICK_WINS_SUMMARY.md** | Quick wins completed summary |
-| **MIGRATION_TODO.md** | Migration progress tracking |
+```
+.docs/
+├── migration/      # Stripe to Mercado Pago migration docs
+├── setup/          # Setup and configuration guides
+├── testing/        # Testing guides and results
+├── deployment/     # Deployment and production guides
+├── guides/         # Feature guides and how-tos
+└── archive/        # Outdated or historical documentation
+```
+
+**Quick Links**:
+- [📖 Full Documentation Index](.docs/README.md)
+- [💳 Payment System (Mercado Pago)](.docs/migration/FINAL_MIGRATION_STATUS.md)
+- [⚙️ Environment Setup](.docs/setup/ENV_SETUP.md)
+- [💾 Database Setup](.docs/setup/DATABASE_SETUP.md)
+- [🔒 HTTPS Setup (Local Dev)](.docs/setup/HTTPS_SETUP.md)
+- [🚀 Vercel Deployment](.docs/deployment/VERCEL_DEPLOYMENT.md)
+- [🧪 Testing Guide](.docs/testing/TESTING_GUIDE.md)
+
+**See [.docs/README.md](.docs/README.md) for the complete documentation guide.**
 
 ---
 

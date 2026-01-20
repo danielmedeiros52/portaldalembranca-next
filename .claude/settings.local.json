@@ -24,7 +24,8 @@
       "Bash(powershell -Command \"Stop-Process -Id 23256 -Force\")",
       "Bash(curl:*)",
       "Bash(findstr:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git mv:*)"
     ]
   }
 }
