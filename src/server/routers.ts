@@ -102,27 +102,26 @@ const authRouter = router({
   getSubscriptionStatus: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return null;
 
-    // Only funeral homes have subscriptions
+    // Funeral homes have memorial credits
     if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
       const funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
       const funeralHome = await db.getFuneralHomeById(funeralHomeId);
 
       if (!funeralHome) return null;
 
-      const isExpired = funeralHome.subscriptionExpiresAt &&
-                       new Date(funeralHome.subscriptionExpiresAt) < new Date();
+      const memorialCredits = funeralHome.memorialCredits || 0;
 
       return {
-        hasSubscription: true,
+        hasSubscription: true, // Keep for compatibility
         status: funeralHome.subscriptionStatus,
         expiresAt: funeralHome.subscriptionExpiresAt,
-        isExpired,
-        canCreateMemorials: funeralHome.subscriptionStatus === "active" ||
-                          (funeralHome.subscriptionStatus === "trialing" && !isExpired),
+        isExpired: false,
+        canCreateMemorials: memorialCredits > 0,
+        memorialCredits, // Number of memorials available
       };
     }
 
-    // Family users don't need subscriptions
+    // Family users don't need credits (they edit existing memorials)
     if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
       return {
         hasSubscription: false,
@@ -130,6 +129,7 @@ const authRouter = router({
         expiresAt: null,
         isExpired: false,
         canCreateMemorials: true, // Family users can always create/edit
+        memorialCredits: null, // Not applicable for family users
       };
     }
 

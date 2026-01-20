@@ -238,25 +238,30 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Subscription Warning Banner */}
-        {subscriptionStatus && !subscriptionStatus.canCreateMemorials && (
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
+        {/* Memorial Credits Banner */}
+        {subscriptionStatus && subscriptionStatus.memorialCredits !== null && (
+          <div className={`border rounded-2xl p-6 shadow-sm mb-8 ${subscriptionStatus.memorialCredits === 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-6 h-6 text-gray-600" />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${subscriptionStatus.memorialCredits === 0 ? 'bg-amber-100' : 'bg-green-100'}`}>
+                <Heart className={`w-6 h-6 ${subscriptionStatus.memorialCredits === 0 ? 'text-amber-600' : 'text-green-600'}`} />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {subscriptionStatus.isExpired ? "Assinatura Expirada" : "Assinatura Inativa"}
+                  {subscriptionStatus.memorialCredits === 0 ? "Nenhum Memorial Disponível" : `${subscriptionStatus.memorialCredits} Memorial${subscriptionStatus.memorialCredits > 1 ? 'is' : ''} Disponível${subscriptionStatus.memorialCredits > 1 ? 'is' : ''}`}
                 </h3>
                 <p className="text-gray-700 mb-4">
-                  {subscriptionStatus.isExpired
-                    ? "Sua assinatura expirou. Para continuar criando novos memoriais, renove sua assinatura."
-                    : "Sua assinatura está inativa. Para criar novos memoriais, ative sua assinatura."}
+                  {subscriptionStatus.memorialCredits === 0
+                    ? "Você não possui memoriais disponíveis para criar. Adquira créditos para criar novos memoriais permanentes."
+                    : `Você pode criar ${subscriptionStatus.memorialCredits} memorial${subscriptionStatus.memorialCredits > 1 ? 'is' : ''} com seu saldo atual.`}
                 </p>
-                <Button className="bg-gray-800 hover:bg-gray-900 text-white">
-                  Renovar Assinatura
-                </Button>
+                {subscriptionStatus.memorialCredits === 0 && (
+                  <Button
+                    className="bg-gray-800 hover:bg-gray-900 text-white"
+                    onClick={() => router.push("/checkout?plan=essencial")}
+                  >
+                    Comprar Memorial
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -277,26 +282,19 @@ export default function DashboardPage() {
                   className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20 transition-all outline-none w-full sm:w-64"
                 />
               </div>
-              <Dialog
-                open={showCreateDialog}
-                onOpenChange={(open) => {
-                  // Prevent opening if subscription is inactive
-                  if (open && subscriptionStatus && !subscriptionStatus.canCreateMemorials) {
-                    toast.error("Assinatura necessária para criar novos memoriais.");
-                    return;
-                  }
-                  setShowCreateDialog(open);
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    className="bg-gray-800 hover:bg-gray-900 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!!subscriptionStatus && !subscriptionStatus.canCreateMemorials}
-                  >
-                    <Plus className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Novo Memorial</span>
-                  </Button>
-                </DialogTrigger>
+              {subscriptionStatus && subscriptionStatus.canCreateMemorials ? (
+                <Dialog
+                  open={showCreateDialog}
+                  onOpenChange={(open) => {
+                    setShowCreateDialog(open);
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button className="bg-gray-800 hover:bg-gray-900 text-white shadow-lg">
+                      <Plus className="w-4 h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Novo Memorial</span>
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-lg bg-white">
                   <DialogHeader>
                     <DialogTitle className="text-xl">Criar Memorial</DialogTitle>
@@ -397,6 +395,15 @@ export default function DashboardPage() {
                   </form>
                 </DialogContent>
               </Dialog>
+              ) : (
+                <Button
+                  className="bg-gray-800 hover:bg-gray-900 text-white shadow-lg"
+                  onClick={() => router.push("/checkout?plan=essencial")}
+                >
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Comprar Memorial</span>
+                </Button>
+              )}
             </div>
           </div>
 

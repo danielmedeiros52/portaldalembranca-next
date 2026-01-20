@@ -306,13 +306,13 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Pricing Section - Redesigned for single plan */}
+      {/* Pricing Section - Pay per memorial */}
       <section id="pricing" className="py-12 sm:py-20 px-4 sm:px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8 sm:mb-12 fade-in">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simples e Transparente</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Pague Apenas pelo que Usar</h2>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-              Um único plano com tudo que você precisa para preservar memórias
+              Sem mensalidades ou assinaturas. Você paga por cada memorial criado e ele fica disponível permanentemente
             </p>
           </div>
 
@@ -332,15 +332,15 @@ export default function HomePage() {
                   <div className="inline-flex w-16 h-16 rounded-2xl bg-gray-800 items-center justify-center mb-6">
                     <Heart className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Memorial Essencial</h3>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Memorial Digital Permanente</h3>
                   <p className="text-gray-600 mb-6">
-                    Tudo que você precisa para criar um memorial digital completo e duradouro
+                    Crie um memorial completo que permanece disponível para sempre. Pague uma única vez por memorial
                   </p>
                   <div className="flex items-baseline justify-center md:justify-start gap-2 mb-6">
                     <span className="text-4xl sm:text-5xl font-bold text-gray-900">R$ 19,90</span>
                     <div className="text-left">
-                      <span className="text-gray-500 text-base block">/ano</span>
-                      <span className="text-gray-600 text-xs font-medium">menos de R$ 2 por mês</span>
+                      <span className="text-gray-500 text-base block">por memorial</span>
+                      <span className="text-gray-600 text-xs font-medium">pagamento único</span>
                     </div>
                   </div>
                   <Button
@@ -402,12 +402,12 @@ export default function HomePage() {
               <div className="mt-8 pt-6 border-t border-gray-100">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">Sem taxas extras</p>
-                    <p className="text-xs text-gray-500 mt-1">Preço fixo anual</p>
+                    <p className="font-semibold text-gray-900 text-sm">Acesso Permanente</p>
+                    <p className="text-xs text-gray-500 mt-1">Memorial disponível para sempre</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">Cancele quando quiser</p>
-                    <p className="text-xs text-gray-500 mt-1">Sem multas ou burocracia</p>
+                    <p className="font-semibold text-gray-900 text-sm">Sem Mensalidades</p>
+                    <p className="text-xs text-gray-500 mt-1">Pague apenas uma vez</p>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">Suporte dedicado</p>

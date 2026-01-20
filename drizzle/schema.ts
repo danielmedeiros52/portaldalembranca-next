@@ -50,6 +50,7 @@ export const funeralHomes = pgTable("funeral_homes", {
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
+  memorialCredits: integer("memorial_credits").default(0).notNull(), // Number of memorials user can create
   subscriptionStatus: subscriptionStatusEnum("subscription_status").default("trialing").notNull(),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
