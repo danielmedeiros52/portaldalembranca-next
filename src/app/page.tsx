@@ -66,10 +66,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255, 255, 255, 0.3)' }}>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gray-800 flex items-center justify-center">
               <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <span className="text-lg sm:text-xl font-bold text-gray-900">{APP_TITLE}</span>
@@ -77,14 +77,14 @@ export default function HomePage() {
           <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
-              className="hidden md:inline-flex text-gray-600 hover:text-teal-700"
+              className="hidden md:inline-flex text-gray-600 hover:text-gray-900"
               onClick={() => router.push("/historic-memorials")}
             >
               Memoriais Históricos
             </Button>
             <Button
               variant="ghost"
-              className="hidden sm:inline-flex text-gray-600 hover:text-teal-700"
+              className="hidden sm:inline-flex text-gray-600 hover:text-gray-900"
               onClick={() => {
                 const pricingSection = document.getElementById("pricing");
                 pricingSection?.scrollIntoView({ behavior: "smooth" });
@@ -95,13 +95,13 @@ export default function HomePage() {
             <Button
               onClick={() => router.push("/login")}
               variant="ghost"
-              className="text-gray-600 hover:text-teal-700 text-sm sm:text-base"
+              className="text-gray-600 hover:text-gray-900 text-sm sm:text-base"
             >
               Entrar
             </Button>
             <Button
               onClick={() => router.push("/checkout?plan=essencial")}
-              className="btn-primary text-sm sm:text-base px-3 sm:px-6 py-2 sm:py-3"
+              className="bg-gray-800 hover:bg-gray-900 text-white text-sm sm:text-base px-3 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors"
             >
               Começar
             </Button>
@@ -110,23 +110,14 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
-        {/* Background Decorations */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 float"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-rose-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 float" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-20 left-1/3 w-72 h-72 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 float" style={{ animationDelay: '4s' }}></div>
-
+      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left Content */}
             <div className="fade-in">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 rounded-full text-teal-700 text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" />
-                Preservando memórias em Pernambuco
-              </div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-6">Preservando memórias em Pernambuco</p>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-4 sm:mb-6">
-                Eternize memórias com{" "}
-                <span className="text-gradient">dignidade</span> e carinho
+                Eternize memórias com dignidade e carinho
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed mb-6 sm:mb-8">
                 Crie um memorial digital duradouro com fotos, história e homenagens. Acesso via QR Code permanente para familiares e amigos visitarem a qualquer momento.
@@ -134,7 +125,7 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-4">
                 <Button
                   onClick={() => router.push("/checkout?plan=essencial")}
-                  className="btn-primary inline-flex items-center gap-2"
+                  className="bg-gray-800 hover:bg-gray-900 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2"
                 >
                   Começar Agora
                   <ArrowRight className="w-4 h-4" />
@@ -145,7 +136,7 @@ export default function HomePage() {
                     pricingSection?.scrollIntoView({ behavior: "smooth" });
                   }}
                   variant="outline"
-                  className="btn-outline"
+                  className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-lg transition-colors"
                 >
                   Ver Planos
                 </Button>
@@ -192,20 +183,20 @@ export default function HomePage() {
                       <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face" className="w-8 h-8 avatar" alt="" />
                       <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=face" className="w-8 h-8 avatar" alt="" />
                       <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=32&h=32&fit=crop&crop=face" className="w-8 h-8 avatar" alt="" />
-                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-xs font-medium text-teal-700 ring-2 ring-white">+4</div>
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-700 ring-2 ring-white">+4</div>
                     </div>
                     <span className="text-sm text-gray-500">4 dedicações</span>
                   </div>
                 </div>
 
                 {/* Floating QR Code */}
-                <div className="absolute -right-4 -bottom-4 card-modern p-4 pulse-glow">
-                  <QrCode className="w-16 h-16 text-teal-600" />
+                <div className="absolute -right-4 -bottom-4 card-modern p-4">
+                  <QrCode className="w-16 h-16 text-gray-700" />
                 </div>
 
                 {/* Floating Badge */}
                 <div className="absolute -left-4 top-1/4 card-modern px-4 py-2 flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-rose-500" />
+                  <Heart className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium text-gray-700">Memorial Ativo</span>
                 </div>
               </div>
@@ -216,17 +207,13 @@ export default function HomePage() {
 
       {/* Featured Historical Memorials Section */}
       {featuredMemorials && featuredMemorials.length > 0 && (
-        <section className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
+        <section className="py-12 sm:py-20 px-4 sm:px-6 bg-white">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-10 sm:mb-12 fade-in">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-full text-amber-700 text-sm font-medium mb-4">
-                <Star className="w-4 h-4 fill-amber-600" />
-                Personalidades Históricas
-              </div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">Personalidades Históricas</p>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 Preservando Legados de Pernambuco
               </h2>
-              <div className="section-divider mb-6"></div>
               <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
                 Conheça as histórias de figuras que marcaram a história de Pernambuco e do Brasil
               </p>
@@ -241,22 +228,22 @@ export default function HomePage() {
                   onClick={() => router.push(`/memorial/${memorial.slug}`)}
                 >
                   {/* Image */}
-                  <div className="relative aspect-square rounded-xl overflow-hidden mb-4 bg-gradient-to-br from-amber-100 to-yellow-100">
+                  <div className="relative aspect-square rounded-xl overflow-hidden mb-4 bg-gray-100">
                     {memorial.mainPhoto ? (
                       <img
                         src={memorial.mainPhoto}
                         alt={memorial.fullName}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <div className="text-6xl font-bold text-amber-300/40">
+                        <div className="text-6xl font-bold text-gray-300">
                           {memorial.fullName.charAt(0).toUpperCase()}
                         </div>
                       </div>
                     )}
                     {/* Featured Badge */}
-                    <div className="absolute top-3 right-3 bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                    <div className="absolute top-3 right-3 bg-gray-800 text-white px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-lg">
                       <Star className="w-3 h-3 fill-white" />
                       Destaque
                     </div>
@@ -266,19 +253,19 @@ export default function HomePage() {
                   <div className="space-y-3">
                     {memorial.popularName ? (
                       <>
-                        <h3 className="font-bold text-lg text-amber-700 group-hover:text-amber-800 transition-colors">
+                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-gray-700 transition-colors">
                           {memorial.popularName}
                         </h3>
                         <p className="text-sm text-gray-500">{memorial.fullName}</p>
                       </>
                     ) : (
-                      <h3 className="font-bold text-lg text-gray-900 group-hover:text-amber-700 transition-colors">
+                      <h3 className="font-bold text-lg text-gray-900 group-hover:text-gray-700 transition-colors">
                         {memorial.fullName}
                       </h3>
                     )}
 
                     {memorial.category && (
-                      <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-xs font-medium">
+                      <div className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-medium">
                         {memorial.category}
                       </div>
                     )}
@@ -291,7 +278,7 @@ export default function HomePage() {
 
                     <Button
                       variant="outline"
-                      className="w-full mt-4 border-amber-200 text-amber-700 hover:bg-amber-50"
+                      className="w-full mt-4 border-gray-200 text-gray-700 hover:bg-gray-50"
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/memorial/${memorial.slug}`);
@@ -309,7 +296,7 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 onClick={() => router.push("/historic-memorials")}
-                className="btn-outline inline-flex items-center gap-2"
+                className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2"
               >
                 Ver Todos os Memoriais Históricos
                 <ArrowRight className="w-4 h-4" />
@@ -320,11 +307,10 @@ export default function HomePage() {
       )}
 
       {/* Pricing Section - Redesigned for single plan */}
-      <section id="pricing" className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
+      <section id="pricing" className="py-12 sm:py-20 px-4 sm:px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8 sm:mb-12 fade-in">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simples e Transparente</h2>
-            <div className="section-divider mb-6"></div>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
               Um único plano com tudo que você precisa para preservar memórias
             </p>
@@ -334,16 +320,16 @@ export default function HomePage() {
           <div className="relative fade-in">
             {/* Popular Badge */}
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-              <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
+              <div className="bg-gray-800 text-white px-6 py-2 rounded-lg text-sm font-semibold shadow-lg">
                 Mais Escolhido
               </div>
             </div>
 
-            <div className="card-modern p-8 sm:p-10 border-2 border-teal-100">
+            <div className="card-modern p-8 sm:p-10 border-2 border-gray-200">
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 {/* Left Side - Plan Info */}
                 <div className="text-center md:text-left">
-                  <div className="inline-flex w-16 h-16 rounded-2xl gradient-primary items-center justify-center mb-6">
+                  <div className="inline-flex w-16 h-16 rounded-2xl bg-gray-800 items-center justify-center mb-6">
                     <Heart className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Memorial Essencial</h3>
@@ -354,12 +340,12 @@ export default function HomePage() {
                     <span className="text-4xl sm:text-5xl font-bold text-gray-900">R$ 19,90</span>
                     <div className="text-left">
                       <span className="text-gray-500 text-base block">/ano</span>
-                      <span className="text-teal-600 text-xs font-medium">menos de R$ 2 por mês</span>
+                      <span className="text-gray-600 text-xs font-medium">menos de R$ 2 por mês</span>
                     </div>
                   </div>
                   <Button
                     onClick={() => router.push("/checkout?plan=essencial")}
-                    className="w-full md:w-auto btn-primary px-8 py-4 text-lg mb-4"
+                    className="w-full md:w-auto bg-gray-800 hover:bg-gray-900 text-white px-8 py-4 text-lg mb-4 rounded-lg transition-colors"
                   >
                     Começar Agora
                   </Button>
@@ -373,38 +359,38 @@ export default function HomePage() {
                   <h4 className="font-semibold text-gray-900 mb-4 text-center md:text-left">Recursos Inclusos:</h4>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3 text-sm text-gray-600">
-                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-teal-600" />
+                      <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-gray-700" />
                       </div>
                       <span>Página memorial personalizada com URL própria</span>
                     </li>
                     <li className="flex items-start gap-3 text-sm text-gray-600">
-                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-teal-600" />
+                      <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-gray-700" />
                       </div>
                       <span>Galeria com até 10 fotos em alta qualidade</span>
                     </li>
                     <li className="flex items-start gap-3 text-sm text-gray-600">
-                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-teal-600" />
+                      <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-gray-700" />
                       </div>
                       <span>Biografia completa e linha do tempo</span>
                     </li>
                     <li className="flex items-start gap-3 text-sm text-gray-600">
-                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-teal-600" />
+                      <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-gray-700" />
                       </div>
                       <span>QR Code para acesso rápido via celular</span>
                     </li>
                     <li className="flex items-start gap-3 text-sm text-gray-600">
-                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-teal-600" />
+                      <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-gray-700" />
                       </div>
                       <span>Compartilhamento ilimitado com familiares</span>
                     </li>
                     <li className="flex items-start gap-3 text-sm text-gray-600">
-                      <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-teal-600" />
+                      <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-gray-700" />
                       </div>
                       <span>Espaço para dedicações e homenagens públicas</span>
                     </li>
@@ -435,11 +421,10 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6 gradient-subtle">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10 sm:mb-16 fade-in">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simples em 3 Passos</h2>
-            <div className="section-divider mb-6"></div>
             <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
               Criar um memorial é rápido e fácil. Comece agora mesmo.
             </p>
@@ -448,7 +433,7 @@ export default function HomePage() {
           <div className="grid sm:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
             {/* Step 1 */}
             <div className="card-modern p-6 fade-in stagger-1 text-center">
-              <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-gray-800 flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">1</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Escolha o Plano</h3>
@@ -459,7 +444,7 @@ export default function HomePage() {
 
             {/* Step 2 */}
             <div className="card-modern p-6 fade-in stagger-2 text-center">
-              <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-gray-800 flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">2</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Preencha os Dados</h3>
@@ -470,7 +455,7 @@ export default function HomePage() {
 
             {/* Step 3 */}
             <div className="card-modern p-6 fade-in stagger-3 text-center">
-              <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-gray-800 flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">3</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Compartilhe</h3>
@@ -484,7 +469,7 @@ export default function HomePage() {
           <div className="text-center mt-12">
             <Button
               onClick={() => router.push("/checkout?plan=essencial")}
-              className="btn-primary inline-flex items-center gap-2 px-8 py-4"
+              className="bg-gray-800 hover:bg-gray-900 text-white inline-flex items-center gap-2 px-8 py-4 rounded-lg transition-colors"
             >
               Criar Meu Memorial Agora
               <ArrowRight className="w-5 h-5" />
@@ -494,18 +479,17 @@ export default function HomePage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">Por Que Escolher o Portal da Lembrança?</h2>
-            <div className="section-divider"></div>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
             {/* Benefit 1 */}
             <div className="card-modern p-6 fade-in stagger-1 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-teal-100 flex items-center justify-center mx-auto mb-4">
-                <Heart className="w-7 h-7 text-teal-600" />
+              <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center mx-auto mb-4">
+                <Heart className="w-7 h-7 text-gray-700" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Preservação Digital</h3>
               <p className="text-gray-600">
@@ -515,8 +499,8 @@ export default function HomePage() {
 
             {/* Benefit 2 */}
             <div className="card-modern p-6 fade-in stagger-2 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center mx-auto mb-4">
-                <Users className="w-7 h-7 text-rose-600" />
+              <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-7 h-7 text-gray-700" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Acesso Familiar</h3>
               <p className="text-gray-600">
@@ -526,8 +510,8 @@ export default function HomePage() {
 
             {/* Benefit 3 */}
             <div className="card-modern p-6 fade-in stagger-3 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-cyan-100 flex items-center justify-center mx-auto mb-4">
-                <QrCode className="w-7 h-7 text-cyan-600" />
+              <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center mx-auto mb-4">
+                <QrCode className="w-7 h-7 text-gray-700" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">QR Code Prático</h3>
               <p className="text-gray-600">
@@ -541,26 +525,22 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="py-12 sm:py-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <div className="relative gradient-hero rounded-2xl sm:rounded-3xl p-6 sm:p-12 text-center overflow-hidden">
-            {/* Decorative Elements */}
-            <div className="absolute top-0 left-0 w-40 h-40 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute bottom-0 right-0 w-60 h-60 bg-white/10 rounded-full translate-x-1/3 translate-y-1/3"></div>
-
+          <div className="relative bg-gray-800 rounded-2xl sm:rounded-3xl p-6 sm:p-12 text-center overflow-hidden">
             <div className="relative z-10">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">Comece Seu Memorial Hoje</h2>
-              <p className="text-base sm:text-lg md:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
                 Preserve as memórias de quem você ama com dignidade e carinho. Processo simples e rápido.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <Button
                   onClick={() => router.push("/checkout?plan=essencial")}
-                  className="bg-white text-teal-700 font-semibold px-6 sm:px-10 py-3 sm:py-4 rounded-xl hover:bg-gray-100 transition-all duration-300 shadow-lg text-sm sm:text-base inline-flex items-center gap-2"
+                  className="bg-white text-gray-900 font-semibold px-6 sm:px-10 py-3 sm:py-4 rounded-lg hover:bg-gray-100 transition-all duration-300 shadow-lg text-sm sm:text-base inline-flex items-center gap-2"
                 >
                   Criar Memorial Agora
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </div>
-              <p className="text-white/80 text-sm mt-6">
+              <p className="text-gray-400 text-sm mt-6">
                 Apenas R$ 19,90/ano • Pagamento seguro • Cancele quando quiser
               </p>
             </div>
@@ -573,7 +553,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gray-700 flex items-center justify-center">
                 <QrCode className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold">{APP_TITLE}</span>

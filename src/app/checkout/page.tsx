@@ -317,7 +317,7 @@ function CheckoutContent() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-teal-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-gray-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Processando pagamento...</h2>
           <p className="text-gray-500">Aguarde enquanto confirmamos seu pagamento.</p>
         </div>
@@ -330,8 +330,8 @@ function CheckoutContent() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 sm:p-12 text-center">
-            <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
-              <Check className="w-10 h-10 text-emerald-600" />
+            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
+              <Check className="w-10 h-10 text-gray-700" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Pagamento Confirmado!</h1>
             <p className="text-lg text-gray-600 mb-8">
@@ -380,7 +380,7 @@ function CheckoutContent() {
             <span className="hidden sm:inline">Voltar</span>
           </button>
           <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-teal-600" />
+            <QrCode className="w-5 h-5 text-gray-600" />
             <span className="font-bold text-gray-900">{APP_TITLE}</span>
           </div>
           <div className="w-20"></div>
@@ -404,7 +404,7 @@ function CheckoutContent() {
               {plans.map((plan) => (
                 <Card
                   key={plan.id}
-                  className="relative transition-all ring-2 ring-teal-600 shadow-lg max-w-md w-full"
+                  className="relative transition-all ring-2 ring-gray-600 shadow-lg max-w-md w-full"
                 >
                   <CardHeader>
                     <CardTitle className="text-center">
@@ -412,7 +412,7 @@ function CheckoutContent() {
                         <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                       </div>
                       <div className="mb-6">
-                        <span className="text-4xl font-bold text-teal-600">
+                        <span className="text-4xl font-bold text-gray-600">
                           R$ {plan.price.toFixed(2)}
                         </span>
                         <span className="text-gray-500">/{plan.period}</span>
@@ -423,7 +423,7 @@ function CheckoutContent() {
                     <ul className="space-y-3 mb-6">
                       {plan.features.map((feature, index) => (
                         <li key={index} className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+                          <Check className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                           <span className="text-sm text-gray-600">{feature}</span>
                         </li>
                       ))}
@@ -488,7 +488,7 @@ function CheckoutContent() {
                           onClick={() => setPaymentMethod("card")}
                           className={`p-4 border-2 rounded-xl flex items-center justify-center gap-2 transition-all ${
                             paymentMethod === "card"
-                              ? "border-teal-600 bg-teal-50"
+                              ? "border-gray-600 bg-gray-50"
                               : "border-gray-200 hover:border-gray-300"
                           }`}
                         >
@@ -633,14 +633,14 @@ function CheckoutContent() {
                       </div>
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
-                        <span className="text-teal-600">R$ {selectedPlan.price.toFixed(2)}</span>
+                        <span className="text-gray-600">R$ {selectedPlan.price.toFixed(2)}</span>
                       </div>
                     </div>
-                    <div className="bg-teal-50 rounded-lg p-4">
-                      <p className="text-sm text-teal-800 font-medium mb-2">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-800 font-medium mb-2">
                         ✓ Inclui neste plano:
                       </p>
-                      <ul className="text-xs text-teal-700 space-y-1">
+                      <ul className="text-xs text-gray-700 space-y-1">
                         {selectedPlan.features.slice(0, 3).map((feature, index) => (
                           <li key={index}>• {feature}</li>
                         ))}
@@ -684,7 +684,7 @@ export default function CheckoutPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
       </div>
     }>
       <Elements stripe={stripePromise}>

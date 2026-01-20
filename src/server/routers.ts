@@ -97,6 +97,44 @@ function generateSlug(name: string, id?: number, isHistorical = false): string {
 // Auth Router
 const authRouter = router({
   me: publicProcedure.query(opts => opts.ctx.user),
+
+  getSubscriptionStatus: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return null;
+
+    // Only funeral homes have subscriptions
+    if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
+      const funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
+      const funeralHome = await db.getFuneralHomeById(funeralHomeId);
+
+      if (!funeralHome) return null;
+
+      const isExpired = funeralHome.subscriptionExpiresAt &&
+                       new Date(funeralHome.subscriptionExpiresAt) < new Date();
+
+      return {
+        hasSubscription: true,
+        status: funeralHome.subscriptionStatus,
+        expiresAt: funeralHome.subscriptionExpiresAt,
+        isExpired,
+        canCreateMemorials: funeralHome.subscriptionStatus === "active" ||
+                          (funeralHome.subscriptionStatus === "trialing" && !isExpired),
+      };
+    }
+
+    // Family users don't need subscriptions
+    if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
+      return {
+        hasSubscription: false,
+        status: null,
+        expiresAt: null,
+        isExpired: false,
+        canCreateMemorials: true, // Family users can always create/edit
+      };
+    }
+
+    return null;
+  }),
+
   logout: publicProcedure.mutation(async ({ ctx }) => {
     // Clear session cookie using Next.js cookies() API
     const cookieStore = await cookies();
@@ -387,9 +425,31 @@ const memorialRouter = router({
       if (ctx.user.openId.startsWith(FUNERAL_HOME_PREFIX + "-")) {
         // Funeral home creating memorial
         funeralHomeId = parseInt(ctx.user.openId.split("-")[1] || "0");
+
+        // Check subscription status for funeral homes
+        const funeralHome = await db.getFuneralHomeById(funeralHomeId);
+        if (!funeralHome) throw new Error("Funerária não encontrada");
+
+        // Block if subscription is cancelled or expired
+        if (funeralHome.subscriptionStatus === "cancelled" || funeralHome.subscriptionStatus === "expired") {
+          throw new Error("Sua assinatura está inativa. Por favor, renove sua assinatura para criar novos memoriais.");
+        }
+
+        // Check if active or trialing subscription has expired
+        if (funeralHome.subscriptionStatus === "trialing" || funeralHome.subscriptionStatus === "active") {
+          if (funeralHome.subscriptionExpiresAt && new Date(funeralHome.subscriptionExpiresAt) < new Date()) {
+            throw new Error("Sua assinatura expirou. Por favor, renove para criar novos memoriais.");
+          }
+        }
+
+        // Block past_due subscriptions
+        if (funeralHome.subscriptionStatus === "past_due") {
+          throw new Error("Seu pagamento está pendente. Por favor, regularize para criar novos memoriais.");
+        }
+
         // Don't set familyUserId yet - will be assigned when family claims it
       } else if (ctx.user.openId.startsWith(FAMILY_USER_PREFIX + "-")) {
-        // Family user creating memorial
+        // Family user creating memorial - no subscription required
         familyUserId = parseInt(ctx.user.openId.split("-")[1] || "0");
         // No funeral home associated
         funeralHomeId = null;
@@ -536,6 +596,64 @@ const photoRouter = router({
       if (!dbInstance) throw new Error("Banco de dados não disponível");
 
       await dbInstance.delete(photos).where(eq(photos.id, input.id));
+      return { success: true };
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      caption: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      await dbInstance.update(photos)
+        .set({ caption: input.caption })
+        .where(eq(photos.id, input.id));
+      return { success: true };
+    }),
+
+  setAsMainPhoto: protectedProcedure
+    .input(z.object({
+      photoId: z.number(),
+      memorialId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      // Get the photo URL
+      const photo = await dbInstance.select().from(photos).where(eq(photos.id, input.photoId)).limit(1);
+      if (photo.length === 0) throw new Error("Foto não encontrada");
+
+      // Update memorial with new main photo
+      await dbInstance.update(memorials)
+        .set({ mainPhoto: photo[0].fileUrl })
+        .where(eq(memorials.id, input.memorialId));
+
+      return { success: true };
+    }),
+
+  setAsCover: protectedProcedure
+    .input(z.object({
+      photoId: z.number(),
+      memorialId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      const dbInstance = await getDb();
+      if (!dbInstance) throw new Error("Banco de dados não disponível");
+
+      // First, unset any existing cover photo for this memorial
+      await dbInstance.update(photos)
+        .set({ isCover: false })
+        .where(eq(photos.memorialId, input.memorialId));
+
+      // Set the selected photo as cover
+      await dbInstance.update(photos)
+        .set({ isCover: true })
+        .where(eq(photos.id, input.photoId));
+
       return { success: true };
     }),
 });

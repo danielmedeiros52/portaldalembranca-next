@@ -44,6 +44,40 @@ export default function MemorialEditPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoCaption, setPhotoCaption] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [editingPhoto, setEditingPhoto] = useState<{ id: number; caption: string } | null>(null);
+  const [showEditPhoto, setShowEditPhoto] = useState(false);
+
+  // Helper functions for date conversion
+  const convertISOToBR = (isoDate: string): string => {
+    if (!isoDate) return "";
+    // Check if already in BR format (contains /)
+    if (isoDate.includes("/")) return isoDate;
+    // Check if in ISO format (contains -)
+    if (isoDate.includes("-")) {
+      const [year, month, day] = isoDate.split("-");
+      if (day && month && year) {
+        return `${day}/${month}/${year}`;
+      }
+    }
+    return isoDate;
+  };
+
+  const convertBRToISO = (brDate: string): string => {
+    if (!brDate) return "";
+    const cleaned = brDate.replace(/\D/g, "");
+    if (cleaned.length !== 8) return "";
+    const day = cleaned.substring(0, 2);
+    const month = cleaned.substring(2, 4);
+    const year = cleaned.substring(4, 8);
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateInput = (value: string): string => {
+    const cleaned = value.replace(/\D/g, "");
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 4) return `${cleaned.substring(0, 2)}/${cleaned.substring(2)}`;
+    return `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}/${cleaned.substring(4, 8)}`;
+  };
 
   useEffect(() => {
     if (memorial) {
@@ -64,6 +98,10 @@ export default function MemorialEditPage() {
   const updateMemorialMutation = api.memorial.update.useMutation();
   const createDescendantMutation = api.descendant.create.useMutation();
   const createPhotoMutation = api.photo.create.useMutation();
+  const deletePhotoMutation = api.photo.delete.useMutation();
+  const updatePhotoMutation = api.photo.update.useMutation();
+  const setAsMainPhotoMutation = api.photo.setAsMainPhoto.useMutation();
+  const setAsCoverMutation = api.photo.setAsCover.useMutation();
   const approveDedicationMutation = api.dedication.approve.useMutation();
   const rejectDedicationMutation = api.dedication.reject.useMutation();
 
@@ -78,11 +116,19 @@ export default function MemorialEditPage() {
 
     setIsSaving(true);
     try {
+      // Ensure dates are in ISO format before saving
+      const birthDateISO = formData.birthDate ?
+        (formData.birthDate.includes("-") ? formData.birthDate : convertBRToISO(formData.birthDate)) :
+        undefined;
+      const deathDateISO = formData.deathDate ?
+        (formData.deathDate.includes("-") ? formData.deathDate : convertBRToISO(formData.deathDate)) :
+        undefined;
+
       await updateMemorialMutation.mutateAsync({
         id: memorial.id,
         fullName: formData.fullName,
-        birthDate: formData.birthDate || undefined,
-        deathDate: formData.deathDate || undefined,
+        birthDate: birthDateISO,
+        deathDate: deathDateISO,
         birthplace: formData.birthplace || undefined,
         filiation: formData.filiation || undefined,
         biography: formData.biography || undefined,
@@ -145,6 +191,13 @@ export default function MemorialEditPage() {
       return;
     }
 
+    // Check photo limit
+    const currentPhotoCount = (memorial as any).photos?.length || 0;
+    if (currentPhotoCount >= 5) {
+      toast.error("Limite máximo de 5 fotos atingido.");
+      return;
+    }
+
     setUploadingPhoto(true);
     try {
       // Convert image to base64
@@ -166,6 +219,74 @@ export default function MemorialEditPage() {
       toast.error(error.message || "Erro ao adicionar foto.");
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: number) => {
+    if (!confirm("Tem certeza que deseja excluir esta foto?")) return;
+
+    try {
+      await deletePhotoMutation.mutateAsync({ id: photoId });
+      toast.success("Foto excluída com sucesso!");
+      refetch();
+    } catch (error: any) {
+      console.error("Delete photo error:", error);
+      toast.error(error.message || "Erro ao excluir foto.");
+    }
+  };
+
+  const handleEditPhoto = (photo: any) => {
+    setEditingPhoto({ id: photo.id, caption: photo.caption || "" });
+    setShowEditPhoto(true);
+  };
+
+  const handleUpdatePhoto = async () => {
+    if (!editingPhoto) return;
+
+    try {
+      await updatePhotoMutation.mutateAsync({
+        id: editingPhoto.id,
+        caption: editingPhoto.caption,
+      });
+      toast.success("Legenda atualizada com sucesso!");
+      setShowEditPhoto(false);
+      setEditingPhoto(null);
+      refetch();
+    } catch (error: any) {
+      console.error("Update photo error:", error);
+      toast.error(error.message || "Erro ao atualizar legenda.");
+    }
+  };
+
+  const handleSetAsMainPhoto = async (photoId: number) => {
+    if (!memorial) return;
+
+    try {
+      await setAsMainPhotoMutation.mutateAsync({
+        photoId,
+        memorialId: memorial.id,
+      });
+      toast.success("Foto de perfil atualizada com sucesso!");
+      refetch();
+    } catch (error: any) {
+      console.error("Set main photo error:", error);
+      toast.error(error.message || "Erro ao definir foto de perfil.");
+    }
+  };
+
+  const handleSetAsCover = async (photoId: number) => {
+    if (!memorial) return;
+
+    try {
+      await setAsCoverMutation.mutateAsync({
+        photoId,
+        memorialId: memorial.id,
+      });
+      toast.success("Foto de capa definida com sucesso!");
+      refetch();
+    } catch (error: any) {
+      console.error("Set cover photo error:", error);
+      toast.error(error.message || "Erro ao definir foto de capa.");
     }
   };
 
@@ -316,18 +437,48 @@ export default function MemorialEditPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Data de Nascimento</label>
                   <input
-                    type="date"
-                    value={formData.birthDate}
-                    onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                    type="text"
+                    value={formData.birthDate ? convertISOToBR(formData.birthDate) : ""}
+                    onChange={(e) => {
+                      const formatted = formatDateInput(e.target.value);
+                      const iso = convertBRToISO(formatted);
+                      // Store ISO if complete (8 digits), otherwise store formatted for display
+                      setFormData({ ...formData, birthDate: iso || formatted });
+                    }}
+                    onBlur={(e) => {
+                      // On blur, try to convert to ISO format
+                      const formatted = formatDateInput(e.target.value);
+                      const iso = convertBRToISO(formatted);
+                      if (iso) {
+                        setFormData({ ...formData, birthDate: iso });
+                      }
+                    }}
+                    placeholder="DD/MM/AAAA"
+                    maxLength={10}
                     className="input-modern"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Data de Falecimento</label>
                   <input
-                    type="date"
-                    value={formData.deathDate}
-                    onChange={(e) => setFormData({ ...formData, deathDate: e.target.value })}
+                    type="text"
+                    value={formData.deathDate ? convertISOToBR(formData.deathDate) : ""}
+                    onChange={(e) => {
+                      const formatted = formatDateInput(e.target.value);
+                      const iso = convertBRToISO(formatted);
+                      // Store ISO if complete (8 digits), otherwise store formatted for display
+                      setFormData({ ...formData, deathDate: iso || formatted });
+                    }}
+                    onBlur={(e) => {
+                      // On blur, try to convert to ISO format
+                      const formatted = formatDateInput(e.target.value);
+                      const iso = convertBRToISO(formatted);
+                      if (iso) {
+                        setFormData({ ...formData, deathDate: iso });
+                      }
+                    }}
+                    placeholder="DD/MM/AAAA"
+                    maxLength={10}
                     className="input-modern"
                   />
                 </div>
@@ -478,10 +629,18 @@ export default function MemorialEditPage() {
           <TabsContent value="photos">
             <div className="card-modern p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Galeria de Fotos</h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Galeria de Fotos</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {(memorial as any).photos?.length || 0} de 5 fotos
+                  </p>
+                </div>
                 <Dialog open={showAddPhoto} onOpenChange={setShowAddPhoto}>
                   <DialogTrigger asChild>
-                    <Button className="btn-primary">
+                    <Button
+                      className="btn-primary"
+                      disabled={((memorial as any).photos?.length || 0) >= 5}
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       Adicionar Foto
                     </Button>
@@ -544,6 +703,14 @@ export default function MemorialEditPage() {
                 </Dialog>
               </div>
 
+              {((memorial as any).photos?.length || 0) >= 5 && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-800">
+                    <strong>Limite atingido:</strong> Você atingiu o limite máximo de 5 fotos. Para adicionar uma nova foto, exclua uma foto existente primeiro.
+                  </p>
+                </div>
+              )}
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(memorial as any).photos && (memorial as any).photos.length > 0 ? (
                   (memorial as any).photos.map((photo: any, index: number) => (
@@ -559,13 +726,35 @@ export default function MemorialEditPage() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <p className="text-white text-sm">{photo.caption}</p>
+                          <p className="text-white text-sm">{photo.caption || "Sem legenda"}</p>
                         </div>
                         <div className="absolute top-2 right-2 flex gap-1">
-                          <button className="p-1.5 bg-white/90 rounded-lg hover:bg-white">
+                          <button
+                            onClick={() => handleSetAsCover(photo.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${photo.isCover ? 'bg-blue-500 text-white' : 'bg-white/90 hover:bg-white text-blue-600'}`}
+                            title={photo.isCover ? "Foto de capa atual" : "Definir como foto de capa"}
+                          >
+                            <Image className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleSetAsMainPhoto(photo.id)}
+                            className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
+                            title="Definir como foto de perfil"
+                          >
+                            <User className="w-4 h-4 text-teal-600" />
+                          </button>
+                          <button
+                            onClick={() => handleEditPhoto(photo)}
+                            className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
+                            title="Editar legenda"
+                          >
                             <Edit3 className="w-4 h-4 text-gray-700" />
                           </button>
-                          <button className="p-1.5 bg-white/90 rounded-lg hover:bg-white">
+                          <button
+                            onClick={() => handleDeletePhoto(photo.id)}
+                            className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
+                            title="Excluir foto"
+                          >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </button>
                         </div>
@@ -579,6 +768,45 @@ export default function MemorialEditPage() {
                 )}
               </div>
             </div>
+
+            {/* Edit Photo Dialog */}
+            <Dialog open={showEditPhoto} onOpenChange={setShowEditPhoto}>
+              <DialogContent className="bg-white">
+                <DialogHeader>
+                  <DialogTitle>Editar Legenda</DialogTitle>
+                  <DialogDescription>Atualize a legenda da foto</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Legenda</label>
+                    <input
+                      value={editingPhoto?.caption || ""}
+                      onChange={(e) => setEditingPhoto(prev => prev ? { ...prev, caption: e.target.value } : null)}
+                      className="input-modern"
+                      placeholder="Descreva a foto..."
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleUpdatePhoto}
+                      className="flex-1 btn-primary"
+                    >
+                      Salvar
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowEditPhoto(false);
+                        setEditingPhoto(null);
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Dedications Tab */}

@@ -159,18 +159,50 @@ export async function getMemorialsByFamilyUserId(familyUserId: number): Promise<
   return db.select().from(memorials).where(eq(memorials.familyUserId, familyUserId)).orderBy(desc(memorials.createdAt));
 }
 
-export async function getMemorialBySlug(slug: string): Promise<Memorial | undefined> {
+export async function getMemorialBySlug(slug: string): Promise<any | undefined> {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(memorials).where(eq(memorials.slug, slug)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  if (result.length === 0) return undefined;
+
+  const memorial = result[0];
+
+  // Fetch related data
+  const [memorialPhotos, memorialDescendants, memorialDedications] = await Promise.all([
+    db.select().from(photos).where(eq(photos.memorialId, memorial.id)).orderBy(asc(photos.order)),
+    db.select().from(descendants).where(eq(descendants.memorialId, memorial.id)),
+    db.select().from(dedications).where(and(eq(dedications.memorialId, memorial.id), eq(dedications.status, 'approved'))),
+  ]);
+
+  return {
+    ...memorial,
+    photos: memorialPhotos,
+    descendants: memorialDescendants,
+    dedications: memorialDedications,
+  };
 }
 
-export async function getMemorialById(id: number): Promise<Memorial | undefined> {
+export async function getMemorialById(id: number): Promise<any | undefined> {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(memorials).where(eq(memorials.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  if (result.length === 0) return undefined;
+
+  const memorial = result[0];
+
+  // Fetch related data
+  const [memorialPhotos, memorialDescendants, memorialDedications] = await Promise.all([
+    db.select().from(photos).where(eq(photos.memorialId, memorial.id)).orderBy(asc(photos.order)),
+    db.select().from(descendants).where(eq(descendants.memorialId, memorial.id)),
+    db.select().from(dedications).where(and(eq(dedications.memorialId, memorial.id), eq(dedications.status, 'approved'))),
+  ]);
+
+  return {
+    ...memorial,
+    photos: memorialPhotos,
+    descendants: memorialDescendants,
+    dedications: memorialDedications,
+  };
 }
 
 // Get all public active memorials

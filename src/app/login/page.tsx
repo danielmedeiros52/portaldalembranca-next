@@ -80,11 +80,7 @@ function LoginPageContent() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Decorative */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero relative overflow-hidden">
-        {/* Decorative Elements */}
-        <div className="absolute top-20 left-20 w-40 h-40 bg-white/10 rounded-full"></div>
-        <div className="absolute bottom-40 right-20 w-60 h-60 bg-white/10 rounded-full"></div>
-        <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-white/5 rounded-full"></div>
+      <div className="hidden lg:flex lg:w-1/2 bg-gray-800 relative overflow-hidden">
 
         <div className="relative z-10 flex flex-col justify-center px-16">
           <div className="flex items-center gap-3 mb-8">
@@ -130,7 +126,7 @@ function LoginPageContent() {
             </button>
             <button
               onClick={() => router.push("/funeraria/login")}
-              className="flex items-center gap-2 text-teal-600 hover:text-teal-700 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-700 transition-colors text-sm font-medium"
             >
               <Building2 className="w-4 h-4" />
               Acesso Funerária
@@ -139,7 +135,7 @@ function LoginPageContent() {
 
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center">
               <QrCode className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">{APP_TITLE}</span>
@@ -151,11 +147,11 @@ function LoginPageContent() {
 
             {/* Plan Selection Notice */}
             {selectedPlan && (
-              <div className="mb-6 p-4 bg-teal-50 rounded-xl border border-teal-200">
-                <p className="text-sm text-teal-800 text-center">
+              <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <p className="text-sm text-gray-800 text-center">
                   <strong>Plano selecionado:</strong> {selectedPlan === 'essencial' ? 'Memorial Essencial' : selectedPlan === 'premium' ? 'Memorial Premium' : 'Plano Família'}
                 </p>
-                <p className="text-xs text-teal-600 text-center mt-1">
+                <p className="text-xs text-gray-600 text-center mt-1">
                   Faça login ou cadastre-se para continuar com a contratação.
                 </p>
               </div>
@@ -200,18 +196,18 @@ function LoginPageContent() {
               </div>
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500" />
+                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-gray-600 focus:ring-gray-500" />
                   <span className="text-sm text-gray-600">Lembrar-me</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => router.push("/forgot-password")}
-                  className="text-sm text-rose-600 hover:text-rose-700"
+                  className="text-sm text-gray-600 hover:text-gray-700"
                 >
                   Esqueceu a senha?
                 </button>
               </div>
-              <Button type="submit" className="w-full btn-secondary" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-gray-800 hover:bg-gray-900 text-white" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -228,7 +224,7 @@ function LoginPageContent() {
               Não tem uma conta?{" "}
               <button
                 onClick={() => router.push(selectedPlan ? `/register?plan=${selectedPlan}` : "/register")}
-                className="text-teal-600 hover:text-teal-700 font-medium"
+                className="text-gray-700 hover:text-gray-900 font-medium"
               >
                 Registre-se
               </button>
@@ -244,7 +240,7 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
       </div>
     }>
       <LoginPageContent />

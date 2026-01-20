@@ -50,6 +50,8 @@ export const funeralHomes = pgTable("funeral_homes", {
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
+  subscriptionStatus: subscriptionStatusEnum("subscription_status").default("trialing").notNull(),
+  subscriptionExpiresAt: timestamp("subscription_expires_at"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -129,6 +131,7 @@ export const photos = pgTable("photos", {
   fileUrl: text("file_url").notNull(), // Changed to TEXT to support base64 images
   caption: text("caption"),
   order: integer("order").default(0).notNull(),
+  isCover: boolean("is_cover").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

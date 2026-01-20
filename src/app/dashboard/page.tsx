@@ -9,8 +9,8 @@ import { api } from "~/trpc/react";
 import { logout } from "~/app/actions/auth";
 import {
   QrCode, Plus, Eye, Edit3, LogOut, Search,
-  Heart, Image, MessageSquare, Loader2, User,
-  Calendar, MapPin, Settings
+  Heart, MessageSquare, Loader2, User,
+  Calendar, MapPin, Settings, AlertCircle
 } from "lucide-react";
 
 const APP_TITLE = "Portal da Lembrança";
@@ -23,6 +23,9 @@ export default function DashboardPage() {
 
   // Fetch memorials
   const { data: memorials, isLoading, refetch } = api.memorial.list.useQuery();
+
+  // Fetch subscription status
+  const { data: subscriptionStatus } = api.auth.getSubscriptionStatus.useQuery();
 
   // Get user info from localStorage
   useEffect(() => {
@@ -47,16 +50,56 @@ export default function DashboardPage() {
     birthplace: "",
   });
 
+  // Helper functions for date conversion
+  const convertISOToBR = (isoDate: string): string => {
+    if (!isoDate) return "";
+    // Check if already in BR format (contains /)
+    if (isoDate.includes("/")) return isoDate;
+    // Check if in ISO format (contains -)
+    if (isoDate.includes("-")) {
+      const [year, month, day] = isoDate.split("-");
+      if (day && month && year) {
+        return `${day}/${month}/${year}`;
+      }
+    }
+    return isoDate;
+  };
+
+  const convertBRToISO = (brDate: string): string => {
+    if (!brDate) return "";
+    const cleaned = brDate.replace(/\D/g, "");
+    if (cleaned.length !== 8) return "";
+    const day = cleaned.substring(0, 2);
+    const month = cleaned.substring(2, 4);
+    const year = cleaned.substring(4, 8);
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateInput = (value: string): string => {
+    const cleaned = value.replace(/\D/g, "");
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 4) return `${cleaned.substring(0, 2)}/${cleaned.substring(2)}`;
+    return `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}/${cleaned.substring(4, 8)}`;
+  };
+
   const createMemorialMutation = api.memorial.create.useMutation();
 
   const handleCreateMemorial = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      // Ensure dates are in ISO format before saving
+      const birthDateISO = formData.birthDate ?
+        (formData.birthDate.includes("-") ? formData.birthDate : convertBRToISO(formData.birthDate)) :
+        undefined;
+      const deathDateISO = formData.deathDate ?
+        (formData.deathDate.includes("-") ? formData.deathDate : convertBRToISO(formData.deathDate)) :
+        undefined;
+
       const result = await createMemorialMutation.mutateAsync({
         fullName: formData.fullName,
-        birthDate: formData.birthDate || undefined,
-        deathDate: formData.deathDate || undefined,
+        birthDate: birthDateISO,
+        deathDate: deathDateISO,
         birthplace: formData.birthplace || undefined,
       });
 
@@ -101,7 +144,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
       </div>
     );
   }
@@ -113,7 +156,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center shadow-lg">
                 <Heart className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -169,11 +212,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center">
-                <Heart className="w-7 h-7 text-teal-600" />
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
+                <Heart className="w-7 h-7 text-gray-700" />
               </div>
               <div>
                 <p className="text-3xl font-bold text-gray-900">{memorials?.length || 0}</p>
@@ -184,8 +227,8 @@ export default function DashboardPage() {
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center">
-                <MessageSquare className="w-7 h-7 text-rose-600" />
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
+                <MessageSquare className="w-7 h-7 text-gray-700" />
               </div>
               <div>
                 <p className="text-3xl font-bold text-gray-900">0</p>
@@ -193,19 +236,31 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center">
-                <Image className="w-7 h-7 text-amber-600" />
+        {/* Subscription Warning Banner */}
+        {subscriptionStatus && !subscriptionStatus.canCreateMemorials && (
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-6 h-6 text-gray-600" />
               </div>
-              <div>
-                <p className="text-3xl font-bold text-gray-900">0</p>
-                <p className="text-sm text-gray-600">Fotos</p>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {subscriptionStatus.isExpired ? "Assinatura Expirada" : "Assinatura Inativa"}
+                </h3>
+                <p className="text-gray-700 mb-4">
+                  {subscriptionStatus.isExpired
+                    ? "Sua assinatura expirou. Para continuar criando novos memoriais, renove sua assinatura."
+                    : "Sua assinatura está inativa. Para criar novos memoriais, ative sua assinatura."}
+                </p>
+                <Button className="bg-gray-800 hover:bg-gray-900 text-white">
+                  Renovar Assinatura
+                </Button>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Memorials Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -219,12 +274,25 @@ export default function DashboardPage() {
                   placeholder="Buscar memorial..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none w-full sm:w-64"
+                  className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20 transition-all outline-none w-full sm:w-64"
                 />
               </div>
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <Dialog
+                open={showCreateDialog}
+                onOpenChange={(open) => {
+                  // Prevent opening if subscription is inactive
+                  if (open && subscriptionStatus && !subscriptionStatus.canCreateMemorials) {
+                    toast.error("Assinatura necessária para criar novos memoriais.");
+                    return;
+                  }
+                  setShowCreateDialog(open);
+                }}
+              >
                 <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg shadow-teal-500/25">
+                  <Button
+                    className="bg-gray-800 hover:bg-gray-900 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={subscriptionStatus && !subscriptionStatus.canCreateMemorials}
+                  >
                     <Plus className="w-4 h-4 sm:mr-2" />
                     <span className="hidden sm:inline">Novo Memorial</span>
                   </Button>
@@ -258,9 +326,24 @@ export default function DashboardPage() {
                           Nascimento
                         </label>
                         <input
-                          type="date"
-                          value={formData.birthDate}
-                          onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                          type="text"
+                          value={formData.birthDate ? convertISOToBR(formData.birthDate) : ""}
+                          onChange={(e) => {
+                            const formatted = formatDateInput(e.target.value);
+                            const iso = convertBRToISO(formatted);
+                            // Store ISO if complete (8 digits), otherwise store formatted for display
+                            setFormData({ ...formData, birthDate: iso || formatted });
+                          }}
+                          onBlur={(e) => {
+                            // On blur, try to convert to ISO format
+                            const formatted = formatDateInput(e.target.value);
+                            const iso = convertBRToISO(formatted);
+                            if (iso) {
+                              setFormData({ ...formData, birthDate: iso });
+                            }
+                          }}
+                          placeholder="DD/MM/AAAA"
+                          maxLength={10}
                           className="input-modern"
                         />
                       </div>
@@ -269,9 +352,24 @@ export default function DashboardPage() {
                           Falecimento
                         </label>
                         <input
-                          type="date"
-                          value={formData.deathDate}
-                          onChange={(e) => setFormData({ ...formData, deathDate: e.target.value })}
+                          type="text"
+                          value={formData.deathDate ? convertISOToBR(formData.deathDate) : ""}
+                          onChange={(e) => {
+                            const formatted = formatDateInput(e.target.value);
+                            const iso = convertBRToISO(formatted);
+                            // Store ISO if complete (8 digits), otherwise store formatted for display
+                            setFormData({ ...formData, deathDate: iso || formatted });
+                          }}
+                          onBlur={(e) => {
+                            // On blur, try to convert to ISO format
+                            const formatted = formatDateInput(e.target.value);
+                            const iso = convertBRToISO(formatted);
+                            if (iso) {
+                              setFormData({ ...formData, deathDate: iso });
+                            }
+                          }}
+                          placeholder="DD/MM/AAAA"
+                          maxLength={10}
                           className="input-modern"
                         />
                       </div>
@@ -287,12 +385,12 @@ export default function DashboardPage() {
                         className="input-modern"
                       />
                     </div>
-                    <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-                      <p className="text-sm text-teal-800">
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                      <p className="text-sm text-gray-700">
                         <strong>Próximo passo:</strong> Após criar, você poderá adicionar biografia, fotos, vídeos e outras informações na página de edição.
                       </p>
                     </div>
-                    <Button type="submit" className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white">
+                    <Button type="submit" className="w-full bg-gray-800 hover:bg-gray-900 text-white">
                       <Plus className="w-4 h-4 mr-2" />
                       Criar Memorial
                     </Button>
@@ -308,22 +406,22 @@ export default function DashboardPage() {
               {filteredMemorials.map((memorial) => (
                 <div
                   key={memorial.id}
-                  className="group bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 hover:shadow-xl border border-gray-100 hover:border-teal-100 transition-all duration-300 cursor-pointer"
+                  className="group bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 hover:shadow-xl border border-gray-100 hover:border-gray-200 transition-all duration-300 cursor-pointer"
                   onClick={() => router.push(`/memorial/${memorial.slug}`)}
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <div className="relative">
                       <img
-                        src={memorial.mainPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(memorial.fullName)}&background=0F766E&color=fff&size=80`}
+                        src={memorial.mainPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(memorial.fullName)}&background=4B5563&color=fff&size=80`}
                         alt={memorial.fullName}
-                        className="w-16 h-16 rounded-2xl object-cover ring-2 ring-gray-100 group-hover:ring-teal-200 transition-all"
+                        className="w-16 h-16 rounded-2xl object-cover ring-2 ring-gray-100 group-hover:ring-gray-200 transition-all"
                       />
                       <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
-                        <Heart className="w-3 h-3 text-rose-500 fill-rose-500" />
+                        <Heart className="w-3 h-3 text-gray-500 fill-gray-500" />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-teal-700 transition-colors">
+                      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
                         {memorial.fullName}
                       </h3>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -343,7 +441,7 @@ export default function DashboardPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="flex-1 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                      className="flex-1 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/memorial/${memorial.slug}`);
@@ -367,7 +465,7 @@ export default function DashboardPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="w-10 h-10 p-0 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                      className="w-10 h-10 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/memorial/${memorial.slug}`);
@@ -395,7 +493,7 @@ export default function DashboardPage() {
               {!searchQuery && (
                 <Button
                   onClick={() => setShowCreateDialog(true)}
-                  className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg shadow-teal-500/25"
+                  className="bg-gray-800 hover:bg-gray-900 text-white shadow-lg"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Criar Primeiro Memorial

@@ -195,11 +195,7 @@ function RegisterPageContent() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Decorative */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero relative overflow-hidden">
-        {/* Decorative Elements */}
-        <div className="absolute top-20 left-20 w-40 h-40 bg-white/10 rounded-full"></div>
-        <div className="absolute bottom-40 right-20 w-60 h-60 bg-white/10 rounded-full"></div>
-        <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-white/5 rounded-full"></div>
+      <div className="hidden lg:flex lg:w-1/2 bg-gray-800 relative overflow-hidden">
 
         <div className="relative z-10 flex flex-col justify-center px-16">
           <div className="flex items-center gap-3 mb-8">
@@ -254,7 +250,7 @@ function RegisterPageContent() {
 
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center">
               <QrCode className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">{APP_TITLE}</span>
@@ -442,16 +438,16 @@ function RegisterPageContent() {
                     id="terms"
                     checked={acceptTerms}
                     onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className={`w-4 h-4 mt-1 rounded border-gray-300 ${userType === "funeral_home" ? "text-teal-600 focus:ring-teal-500" : "text-rose-600 focus:ring-rose-500"}`}
+                    className="w-4 h-4 mt-1 rounded border-gray-300 text-gray-600 focus:ring-gray-500"
                     disabled={isLoading}
                   />
                   <label htmlFor="terms" className="text-sm text-gray-600">
                     Li e aceito os{" "}
-                    <a href="#" className={`${userType === "funeral_home" ? "text-teal-600 hover:text-teal-700" : "text-rose-600 hover:text-rose-700"}`}>
+                    <a href="#" className="text-gray-700 hover:text-gray-900">
                       Termos de Uso
                     </a>{" "}
                     e a{" "}
-                    <a href="#" className={`${userType === "funeral_home" ? "text-teal-600 hover:text-teal-700" : "text-rose-600 hover:text-rose-700"}`}>
+                    <a href="#" className="text-gray-700 hover:text-gray-900">
                       Política de Privacidade
                     </a>
                   </label>
@@ -460,7 +456,7 @@ function RegisterPageContent() {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  className={`w-full ${userType === "funeral_home" ? "btn-primary" : "btn-secondary"}`}
+                  className="w-full bg-gray-800 hover:bg-gray-900 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -480,7 +476,7 @@ function RegisterPageContent() {
               Já tem uma conta?{" "}
               <button
                 onClick={() => router.push(selectedPlan ? `/login?plan=${selectedPlan}` : "/login")}
-                className="text-teal-600 hover:text-teal-700 font-medium"
+                className="text-gray-700 hover:text-gray-900 font-medium"
               >
                 Faça login
               </button>
@@ -496,7 +492,7 @@ export default function RegisterPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
       </div>
     }>
       <RegisterPageContent />
