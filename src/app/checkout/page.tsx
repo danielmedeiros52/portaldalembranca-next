@@ -418,9 +418,9 @@ function CheckoutContent() {
 
       // Store PIX data
       setPixPaymentId(result.id);
-      setPixQrCode(result.pixQrCode);
-      setPixQrCodeBase64(result.pixQrCodeBase64);
-      setPixExpirationDate(result.pixExpirationDate);
+      setPixQrCode(result.pixQrCode ?? null);
+      setPixQrCodeBase64(result.pixQrCodeBase64 ?? null);
+      setPixExpirationDate(result.pixExpirationDate ?? null);
 
       toast.success("Código PIX gerado! Escaneie o QR Code para pagar.");
     } catch (error: any) {
