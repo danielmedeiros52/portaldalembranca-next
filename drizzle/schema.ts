@@ -14,6 +14,8 @@ export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded
 export const paymentMethodEnum = pgEnum("payment_method", ["card", "pix", "boleto"]);
 export const userTypeEnum = pgEnum("user_type", ["funeral_home", "family_user", "oauth_user"]);
 export const dedicationStatusEnum = pgEnum("dedication_status", ["pending", "approved", "rejected"]);
+export const walletOwnerTypeEnum = pgEnum("wallet_owner_type", ["user", "family", "funeral_home"]);
+export const transferStatusEnum = pgEnum("transfer_status", ["pending", "completed", "failed", "cancelled"]);
 
 /**
  * Core user table backing auth flow.
@@ -50,7 +52,6 @@ export const funeralHomes = pgTable("funeral_homes", {
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
-  memorialCredits: integer("memorial_credits").default(0).notNull(), // Number of memorials user can create
   subscriptionStatus: subscriptionStatusEnum("subscription_status").default("trialing").notNull(),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -72,7 +73,8 @@ export const familyUsers = pgTable("family_users", {
   invitationToken: varchar("invitation_token", { length: 255 }),
   invitationExpiry: timestamp("invitation_expiry"),
   isActive: boolean("is_active").default(false).notNull(),
-  memorialCredits: integer("memorial_credits").default(0).notNull(), // Number of memorials user can create
+  /** Optional family membership - user can belong to a family group */
+  familyId: integer("family_id"), // References families table (FK added in migration)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -319,3 +321,63 @@ export const paymentTransactions = pgTable("payment_transactions", {
 
 export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;
+
+/**
+ * Families table - Groups of users sharing memorial credits
+ */
+export const families = pgTable("families", {
+  id: serial("id").primaryKey(),
+  /** Family name (e.g., "Família Silva") */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Admin user who created/manages the family */
+  adminUserId: integer("admin_user_id").notNull().references(() => familyUsers.id),
+  /** Optional description */
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Family = typeof families.$inferSelect;
+export type InsertFamily = typeof families.$inferInsert;
+
+/**
+ * Wallets table - Credit storage for users, families, and funeral homes
+ */
+export const wallets = pgTable("wallets", {
+  id: serial("id").primaryKey(),
+  /** Type of owner: user, family, or funeral_home */
+  ownerType: walletOwnerTypeEnum("owner_type").notNull(),
+  /** ID of the owner in their respective table */
+  ownerId: integer("owner_id").notNull(),
+  /** Number of memorial credits available */
+  credits: integer("credits").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Wallet = typeof wallets.$inferSelect;
+export type InsertWallet = typeof wallets.$inferInsert;
+
+/**
+ * Credit Transfers table - Audit trail for credit movements between wallets
+ */
+export const creditTransfers = pgTable("credit_transfers", {
+  id: serial("id").primaryKey(),
+  /** Source wallet */
+  fromWalletId: integer("from_wallet_id").notNull().references(() => wallets.id),
+  /** Destination wallet */
+  toWalletId: integer("to_wallet_id").notNull().references(() => wallets.id),
+  /** Number of credits transferred */
+  amount: integer("amount").notNull(),
+  /** User who initiated the transfer */
+  transferredByUserId: integer("transferred_by_user_id").notNull(),
+  /** Transfer status */
+  status: transferStatusEnum("status").default("completed").notNull(),
+  /** Optional note/reason for transfer */
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type CreditTransfer = typeof creditTransfers.$inferSelect;
+export type InsertCreditTransfer = typeof creditTransfers.$inferInsert;

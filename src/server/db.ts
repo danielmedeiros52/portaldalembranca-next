@@ -1,8 +1,8 @@
 import { eq, and, desc, count, sql, gte, lte, isNull, or, like, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { users, funeralHomes, familyUsers, memorials, descendants, photos, dedications, leads, orders, orderHistory, adminUsers } from "../../drizzle/schema";
-import type { InsertUser, FuneralHome, FamilyUser, Memorial, Descendant, Photo, Dedication, Lead, Order, OrderHistory, AdminUser, InsertMemorial, InsertDescendant, InsertPhoto, InsertDedication, InsertLead, InsertOrder, InsertOrderHistory, InsertAdminUser } from "../../drizzle/schema";
+import { users, funeralHomes, familyUsers, memorials, descendants, photos, dedications, leads, orders, orderHistory, adminUsers, wallets, families, creditTransfers } from "../../drizzle/schema";
+import type { InsertUser, FuneralHome, FamilyUser, Memorial, Descendant, Photo, Dedication, Lead, Order, OrderHistory, AdminUser, InsertMemorial, InsertDescendant, InsertPhoto, InsertDedication, InsertLead, InsertOrder, InsertOrderHistory, InsertAdminUser, Wallet, InsertWallet, Family, InsertFamily, CreditTransfer, InsertCreditTransfer } from "../../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -506,4 +506,203 @@ export async function getAllFamilyUsers(): Promise<FamilyUser[]> {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(familyUsers).orderBy(desc(familyUsers.createdAt));
+}
+
+// ============================
+// WALLET SYSTEM FUNCTIONS
+// ============================
+
+/**
+ * Get wallet by owner type and ID
+ */
+export async function getWalletByOwner(ownerType: 'user' | 'family' | 'funeral_home', ownerId: number): Promise<Wallet | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(wallets).where(
+    and(
+      eq(wallets.ownerType, ownerType),
+      eq(wallets.ownerId, ownerId)
+    )
+  ).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Create a new wallet for an owner
+ */
+export async function createWallet(ownerType: 'user' | 'family' | 'funeral_home', ownerId: number, initialCredits: number = 0): Promise<Wallet | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.insert(wallets).values({
+    ownerType,
+    ownerId,
+    credits: initialCredits,
+  }).returning();
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Get or create wallet for an owner (ensures wallet exists)
+ */
+export async function getOrCreateWallet(ownerType: 'user' | 'family' | 'funeral_home', ownerId: number): Promise<Wallet | undefined> {
+  let wallet = await getWalletByOwner(ownerType, ownerId);
+  if (!wallet) {
+    wallet = await createWallet(ownerType, ownerId, 0);
+  }
+  return wallet;
+}
+
+/**
+ * Get wallet balance (credits available)
+ */
+export async function getWalletBalance(ownerType: 'user' | 'family' | 'funeral_home', ownerId: number): Promise<number> {
+  const wallet = await getWalletByOwner(ownerType, ownerId);
+  return wallet?.credits ?? 0;
+}
+
+/**
+ * Update wallet credits (atomic operation)
+ */
+export async function updateWalletCredits(walletId: number, amount: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.update(wallets)
+      .set({ credits: sql`${wallets.credits} + ${amount}` })
+      .where(eq(wallets.id, walletId));
+    return true;
+  } catch (error) {
+    console.error('[Wallet] Failed to update credits:', error);
+    return false;
+  }
+}
+
+/**
+ * Transfer credits between wallets
+ */
+export async function transferCredits(
+  fromWalletId: number,
+  toWalletId: number,
+  amount: number,
+  transferredByUserId: number,
+  note?: string
+): Promise<{ success: boolean; transfer?: CreditTransfer; error?: string }> {
+  const db = await getDb();
+  if (!db) return { success: false, error: 'Database not available' };
+
+  if (amount <= 0) {
+    return { success: false, error: 'Amount must be greater than zero' };
+  }
+
+  try {
+    // Check if source wallet has enough credits
+    const fromWallet = await db.select().from(wallets).where(eq(wallets.id, fromWalletId)).limit(1);
+    if (fromWallet.length === 0 || !fromWallet[0]) {
+      return { success: false, error: 'Source wallet not found' };
+    }
+
+    if (fromWallet[0].credits < amount) {
+      return { success: false, error: 'Insufficient credits' };
+    }
+
+    // Perform transfer in a transaction (using atomic updates)
+    // Deduct from source
+    await db.update(wallets)
+      .set({ credits: sql`${wallets.credits} - ${amount}` })
+      .where(eq(wallets.id, fromWalletId));
+
+    // Add to destination
+    await db.update(wallets)
+      .set({ credits: sql`${wallets.credits} + ${amount}` })
+      .where(eq(wallets.id, toWalletId));
+
+    // Record the transfer
+    const transferResult = await db.insert(creditTransfers).values({
+      fromWalletId,
+      toWalletId,
+      amount,
+      transferredByUserId,
+      status: 'completed',
+      note: note || null,
+    }).returning();
+
+    return {
+      success: true,
+      transfer: transferResult[0],
+    };
+  } catch (error) {
+    console.error('[Wallet] Transfer failed:', error);
+    return { success: false, error: 'Transfer failed' };
+  }
+}
+
+/**
+ * Get transfer history for a wallet
+ */
+export async function getWalletTransfers(walletId: number, limit: number = 50): Promise<CreditTransfer[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(creditTransfers)
+    .where(or(
+      eq(creditTransfers.fromWalletId, walletId),
+      eq(creditTransfers.toWalletId, walletId)
+    ))
+    .orderBy(desc(creditTransfers.createdAt))
+    .limit(limit);
+}
+
+// ============================
+// FAMILY SYSTEM FUNCTIONS
+// ============================
+
+/**
+ * Get family by ID
+ */
+export async function getFamilyById(id: number): Promise<Family | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(families).where(eq(families.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Get family members (users in a family)
+ */
+export async function getFamilyMembers(familyId: number): Promise<FamilyUser[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(familyUsers).where(eq(familyUsers.familyId, familyId));
+}
+
+/**
+ * Create a new family
+ */
+export async function createFamily(name: string, adminUserId: number, description?: string): Promise<Family | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  try {
+    // Create the family
+    const familyResult = await db.insert(families).values({
+      name,
+      adminUserId,
+      description: description || null,
+    }).returning();
+
+    const family = familyResult[0];
+    if (!family) return undefined;
+
+    // Create a wallet for the family
+    await createWallet('family', family.id, 0);
+
+    // Update the admin user's family_id
+    await db.update(familyUsers)
+      .set({ familyId: family.id })
+      .where(eq(familyUsers.id, adminUserId));
+
+    return family;
+  } catch (error) {
+    console.error('[Family] Failed to create family:', error);
+    return undefined;
+  }
 }
