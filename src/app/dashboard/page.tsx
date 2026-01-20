@@ -212,7 +212,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
@@ -227,17 +227,33 @@ export default function DashboardPage() {
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
-                <QrCode className="w-7 h-7 text-gray-700" />
+              <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center">
+                <User className="w-7 h-7 text-blue-700" />
               </div>
               <div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {subscriptionStatus?.memorialCredits ?? '-'}
+                  {subscriptionStatus?.personalWallet ?? 0}
                 </p>
-                <p className="text-sm text-gray-600">Créditos Disponíveis</p>
+                <p className="text-sm text-gray-600">Carteira Pessoal</p>
               </div>
             </div>
           </div>
+
+          {subscriptionStatus?.familyWallet !== null && subscriptionStatus?.familyWallet !== undefined && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center">
+                  <Heart className="w-7 h-7 text-green-700" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {subscriptionStatus.familyWallet}
+                  </p>
+                  <p className="text-sm text-gray-600">Carteira Familiar</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Memorial Credits Banner */}
@@ -254,7 +270,7 @@ export default function DashboardPage() {
                 <p className="text-gray-700 mb-4">
                   {subscriptionStatus.memorialCredits === 0
                     ? "Você não possui memoriais disponíveis para criar. Adquira créditos para criar novos memoriais permanentes."
-                    : `Você pode criar ${subscriptionStatus.memorialCredits} memorial${subscriptionStatus.memorialCredits > 1 ? 'is' : ''} com seu saldo atual.`}
+                    : `Você pode criar ${subscriptionStatus.memorialCredits} memorial${subscriptionStatus.memorialCredits > 1 ? 'is' : ''} com seu saldo atual (${subscriptionStatus.personalWallet || 0} pessoal${subscriptionStatus.familyWallet ? ` + ${subscriptionStatus.familyWallet} familiar` : ''}).`}
                 </p>
                 {subscriptionStatus.memorialCredits === 0 && (
                   <Button
