@@ -291,7 +291,7 @@ export default function DashboardPage() {
                 <DialogTrigger asChild>
                   <Button
                     className="bg-gray-800 hover:bg-gray-900 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={subscriptionStatus && !subscriptionStatus.canCreateMemorials}
+                    disabled={!!subscriptionStatus && !subscriptionStatus.canCreateMemorials}
                   >
                     <Plus className="w-4 h-4 sm:mr-2" />
                     <span className="hidden sm:inline">Novo Memorial</span>

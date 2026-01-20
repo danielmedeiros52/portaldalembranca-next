@@ -14,6 +14,7 @@ import { generateMemorialQRCode, generateMemorialQRCodeSVG } from "~/server/qrco
 import { sdk } from "~/server/_core/sdk";
 import { cookies } from "next/headers";
 import { initializeDefaultAdmin } from "~/lib/init-admin";
+import { env } from "~/env";
 
 const FUNERAL_HOME_PREFIX = "funeral" as const;
 const FAMILY_USER_PREFIX = "family" as const;
@@ -629,7 +630,7 @@ const photoRouter = router({
 
       // Update memorial with new main photo
       await dbInstance.update(memorials)
-        .set({ mainPhoto: photo[0].fileUrl })
+        .set({ mainPhoto: photo[0]!.fileUrl })
         .where(eq(memorials.id, input.memorialId));
 
       return { success: true };

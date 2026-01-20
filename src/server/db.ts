@@ -165,7 +165,7 @@ export async function getMemorialBySlug(slug: string): Promise<any | undefined> 
   const result = await db.select().from(memorials).where(eq(memorials.slug, slug)).limit(1);
   if (result.length === 0) return undefined;
 
-  const memorial = result[0];
+  const memorial = result[0]!;
 
   // Fetch related data
   const [memorialPhotos, memorialDescendants, memorialDedications] = await Promise.all([
@@ -188,7 +188,7 @@ export async function getMemorialById(id: number): Promise<any | undefined> {
   const result = await db.select().from(memorials).where(eq(memorials.id, id)).limit(1);
   if (result.length === 0) return undefined;
 
-  const memorial = result[0];
+  const memorial = result[0]!;
 
   // Fetch related data
   const [memorialPhotos, memorialDescendants, memorialDedications] = await Promise.all([

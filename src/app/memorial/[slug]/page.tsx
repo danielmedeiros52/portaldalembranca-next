@@ -347,7 +347,7 @@ export default function PublicMemorialPage() {
             {memorial.biography && (
               <div className="card-modern p-8 sm:p-10 fade-in">
                 <div className="prose prose-gray prose-lg max-w-none">
-                  {memorial.biography.split('\n\n').map((paragraph, index) => (
+                  {memorial.biography.split('\n\n').map((paragraph: string, index: number) => (
                     <p key={index} className="text-gray-700 leading-relaxed mb-6 text-center text-base sm:text-lg first:text-xl first:font-serif first:italic first:text-gray-600">
                       {paragraph}
                     </p>
